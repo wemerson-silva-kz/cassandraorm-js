@@ -102,10 +102,11 @@ export class CassandraClient {
       replication_factor: 1
     };
 
-    const query = `
-      CREATE KEYSPACE IF NOT EXISTS ${keyspaceName}
-      WITH REPLICATION = ${JSON.stringify(replicationStrategy).replace(/"/g, "'")}
-    `;
+    const replicationString = Object.entries(replicationStrategy)
+      .map(([key, value]) => `'${key}': ${typeof value === 'string' ? `'${value}'` : value}`)
+      .join(', ');
+
+    const query = `CREATE KEYSPACE IF NOT EXISTS ${keyspaceName} WITH REPLICATION = { ${replicationString} }`;
     
     await this.execute(query);
   }
