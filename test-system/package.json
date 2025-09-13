@@ -1,12 +1,14 @@
 {
   "name": "cassandraorm-test-system",
   "version": "1.0.0",
-  "description": "Sistema básico de teste para CassandraORM JS",
+  "description": "Sistema completo de teste para CassandraORM JS",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js"
+    "test-all": "node test-all-features.js",
+    "test-production": "node test-production.js",
+    "test-complete": "npm run start && npm run test-all && npm run test-production"
   },
   "dependencies": {
     "cassandraorm-js": "file:../"

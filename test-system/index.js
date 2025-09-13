@@ -45,7 +45,6 @@ async function initializeSystem() {
         id uuid PRIMARY KEY,
         name text,
         email text,
-        age int,
         created_at timestamp
       )
     `);
@@ -84,14 +83,12 @@ async function createSampleData(client) {
         id: userId1,
         name: 'João Silva',
         email: 'joao@example.com',
-        age: 30,
         created_at: new Date()
       },
       {
         id: userId2,
         name: 'Maria Santos',
         email: 'maria@example.com',
-        age: 25,
         created_at: new Date()
       }
     ];
@@ -99,8 +96,8 @@ async function createSampleData(client) {
     // Inserir usuários
     for (const user of users) {
       await client.execute(
-        'INSERT INTO users (id, name, email, age, created_at) VALUES (?, ?, ?, ?, ?)',
-        [user.id, user.name, user.email, user.age, user.created_at]
+        'INSERT INTO users (id, name, email, created_at) VALUES (?, ?, ?, ?)',
+        [user.id, user.name, user.email, user.created_at]
       );
     }
     console.log('✅ Usuários criados!');
@@ -154,7 +151,7 @@ async function testQueries(client, userIds) {
     console.log('\n📋 TODOS OS USUÁRIOS:');
     const allUsers = await client.execute('SELECT * FROM users');
     allUsers.rows.forEach(user => {
-      console.log(`  - ${user.name} (${user.email}) - ${user.age} anos`);
+      console.log(`  - ${user.name} (${user.email})`);
     });
 
     // Buscar posts de um usuário específico
@@ -211,8 +208,8 @@ async function testCRUDOperations(client) {
     // CREATE
     console.log('\n➕ CREATE:');
     await client.execute(
-      'INSERT INTO users (id, name, email, age, created_at) VALUES (?, ?, ?, ?, ?)',
-      [testUserId, 'Teste CRUD', 'crud@test.com', 28, new Date()]
+      'INSERT INTO users (id, name, email, created_at) VALUES (?, ?, ?, ?)',
+      [testUserId, 'Teste CRUD', 'crud@test.com', new Date()]
     );
     console.log('  ✅ Usuário criado');
 
@@ -229,8 +226,8 @@ async function testCRUDOperations(client) {
     // UPDATE
     console.log('\n✏️ UPDATE:');
     await client.execute(
-      'UPDATE users SET age = ? WHERE id = ?',
-      [29, testUserId]
+      'UPDATE users SET name = ? WHERE id = ?',
+      ['CRUD Atualizado', testUserId]
     );
     console.log('  ✅ Usuário atualizado');
 
