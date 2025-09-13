@@ -1,9 +1,17 @@
 {
   "name": "cassandraorm-js",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Modern ORM for Apache Cassandra and ScyllaDB with TypeScript support",
   "main": "index.js",
-  "keywords": ["cassandra", "orm", "scylladb", "database", "nosql", "typescript"],
+  "types": "index.d.ts",
+  "keywords": [
+    "cassandra",
+    "orm",
+    "scylladb",
+    "database",
+    "nosql",
+    "typescript"
+  ],
   "author": "Wemerson Silva <wemerson.silva.kz@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -15,14 +23,19 @@
   },
   "homepage": "https://github.com/wemerson-silva-kz/cassandraorm-js#readme",
   "scripts": {
-    "test": "node test-connection.js",
-    "test-orm": "node test-orm.js"
+    "test": "mocha test/*.test.js --timeout 10000",
+    "test-connection": "node test-connection.js",
+    "test-orm": "node test-orm.js",
+    "lint": "eslint .",
+    "prepublishOnly": "npm test"
   },
   "dependencies": {
     "cassandra-driver": "^4.7.2"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "eslint": "^8.57.1",
+    "mocha": "^10.8.2",
     "typescript": "^5.0.0"
   },
   "engines": {
@@ -30,7 +43,9 @@
   },
   "files": [
     "index.js",
+    "index.d.ts",
     "README.md",
+    "README.pt.md",
     "LICENSE",
     "docs/"
   ]

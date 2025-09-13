@@ -2,11 +2,15 @@ const cassandra = require('cassandra-driver');
 
 class CassandraORM {
   constructor(options) {
+    this.options = options;
     this.client = new cassandra.Client({
       contactPoints: options.contactPoints || ['localhost'],
-      localDataCenter: options.localDataCenter || 'datacenter1'
+      localDataCenter: options.localDataCenter || 'datacenter1',
+      authProvider: options.authProvider,
+      sslOptions: options.sslOptions
     });
     this.keyspace = options.keyspace;
+    this.models = new Map();
   }
 
   async connect() {
@@ -15,21 +19,25 @@ class CassandraORM {
       await this.createKeyspace();
       await this.client.shutdown();
       this.client = new cassandra.Client({
-        contactPoints: ['localhost'],
-        localDataCenter: 'datacenter1',
-        keyspace: this.keyspace
+        contactPoints: this.options.contactPoints || ['localhost'],
+        localDataCenter: this.options.localDataCenter || 'datacenter1',
+        keyspace: this.keyspace,
+        authProvider: this.options.authProvider,
+        sslOptions: this.options.sslOptions
       });
       await this.client.connect();
     }
   }
 
   async createKeyspace() {
+    const replication = this.options.replication || {
+      class: 'SimpleStrategy',
+      replication_factor: 1
+    };
+    
     const query = `
       CREATE KEYSPACE IF NOT EXISTS ${this.keyspace}
-      WITH REPLICATION = {
-        'class': 'SimpleStrategy',
-        'replication_factor': 1
-      }
+      WITH REPLICATION = ${JSON.stringify(replication).replace(/"/g, "'")}
     `;
     await this.client.execute(query);
   }
@@ -38,12 +46,27 @@ class CassandraORM {
     return cassandra.types.Uuid.random();
   }
 
+  timeuuid() {
+    return cassandra.types.TimeUuid.now();
+  }
+
   model(name, schema, options = {}) {
-    return new Model(this.client, name, schema, options);
+    if (this.models.has(name)) {
+      return this.models.get(name);
+    }
+    
+    const model = new Model(this.client, name, schema, options);
+    this.models.set(name, model);
+    return model;
   }
 
   async shutdown() {
     await this.client.shutdown();
+  }
+
+  // Batch operations
+  batch() {
+    return new BatchQuery(this.client);
   }
 }
 
@@ -133,4 +156,51 @@ class Model {
   }
 }
 
-module.exports = { CassandraORM, Model };
+class BatchQuery {
+  constructor(client) {
+    this.client = client;
+    this.queries = [];
+  }
+
+  insert(model, data) {
+    const fields = Object.keys(data).join(', ');
+    const placeholders = Object.keys(data).map(() => '?').join(', ');
+    const values = Object.values(data);
+    
+    this.queries.push({
+      query: `INSERT INTO ${model.name} (${fields}) VALUES (${placeholders})`,
+      params: values
+    });
+    return this;
+  }
+
+  update(model, where, data) {
+    const setClause = Object.keys(data).map(key => `${key} = ?`).join(', ');
+    const whereClause = Object.keys(where).map(key => `${key} = ?`).join(' AND ');
+    const values = [...Object.values(data), ...Object.values(where)];
+    
+    this.queries.push({
+      query: `UPDATE ${model.name} SET ${setClause} WHERE ${whereClause}`,
+      params: values
+    });
+    return this;
+  }
+
+  delete(model, where) {
+    const whereClause = Object.keys(where).map(key => `${key} = ?`).join(' AND ');
+    const values = Object.values(where);
+    
+    this.queries.push({
+      query: `DELETE FROM ${model.name} WHERE ${whereClause}`,
+      params: values
+    });
+    return this;
+  }
+
+  async execute() {
+    await this.client.batch(this.queries, { prepare: true });
+    this.queries = [];
+  }
+}
+
+module.exports = { CassandraORM, Model, BatchQuery };
