@@ -15,12 +15,12 @@ import type {
   ResultSet,
   EachRowOptions,
 } from "./types.js";
-import { DataExporter } from './utils/exporter.js';
-import { DataImporter, type ImportOptions } from './utils/importer.js';
-import { ElassandraClient, type ElasticsearchConfig, type SearchQuery } from './elassandra/client.js';
-import { ModelLoader } from './utils/model-loader.js';
-import { StreamingQuery, createModelStream } from './utils/streaming.js';
-import { UniqueConstraintManager } from './unique-constraints.js';
+import { DataExporter } from '../utils/exporter.js';
+import { DataImporter, type ImportOptions } from '../utils/importer.js';
+import { ElassandraClient, type ElasticsearchConfig, type SearchQuery } from '../elassandra/client.js';
+import { ModelLoader } from '../utils/model-loader.js';
+import { StreamingQuery, createModelStream } from '../utils/streaming.js';
+import { UniqueConstraintManager } from '../validation/unique-constraints.js';
 
 export abstract class BaseModel implements BaseModelInstance {
   _modified: Record<string, boolean> = {};

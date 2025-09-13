@@ -1,11 +1,11 @@
 import { Client } from 'cassandra-driver';
-import { ConnectionPool } from './connection-pool.js';
-import { QueryBuilder } from './query-builder.js';
-import { MigrationManager } from './migrations.js';
-import { Monitor } from './monitoring.js';
-import { PluginManager, CachePlugin, ValidationPlugin } from './plugin-system.js';
-import { UniqueConstraintManager } from './unique-constraints.js';
-import { BulkWriter } from './bulk-writer.js';
+import { ConnectionPool } from '../connection/pool.js';
+import { QueryBuilder } from '../query/query-builder.js';
+import { MigrationManager } from '../utils/migrations.js';
+import { Monitor } from '../observability/monitoring.js';
+import { PluginManager, CachePlugin, ValidationPlugin } from '../utils/plugin-system.js';
+import { UniqueConstraintManager } from '../validation/unique-constraints.js';
+import { BulkWriter } from '../data/bulk-writer.js';
 
 interface CassandraORMOptions {
   contactPoints?: string[];

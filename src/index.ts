@@ -1,52 +1,28 @@
-import { CassandraClient } from "./client.js";
-import type { CassandraClientOptions } from "./types.js";
+import { CassandraClient } from "./core/client.js";
+import type { CassandraClientOptions } from "./core/types.js";
 
-export { BaseModel, CassandraClient } from "./client.js";
-export { CassandraORM, Model } from "./orm.js";
-export { ConnectionPool } from "./connection-pool.js";
-export { QueryBuilder } from "./query-builder.js";
-export { MigrationManager } from "./migrations.js";
-export { Monitor } from "./monitoring.js";
-export { PluginManager, CachePlugin, ValidationPlugin } from "./plugin-system.js";
-export { DataExporter } from './utils/exporter.js';
-export { DataImporter, type ImportOptions } from './utils/importer.js';
-export { ElassandraClient, type ElasticsearchConfig, type SearchQuery } from './elassandra/client.js';
-export { ModelLoader } from './utils/model-loader.js';
-export { StreamingQuery, createModelStream } from './utils/streaming.js';
-export { UniqueConstraintManager, type UniqueConstraintOptions } from './unique-constraints.js';
-export { BulkWriter, type BulkWriterOptions, type BulkOperation, type BulkResult } from './bulk-writer.js';
+// Core exports
+export { BaseModel, CassandraClient } from "./core/client.js";
+export { CassandraORM, Model } from "./core/orm.js";
 
-// Advanced Features - High Priority (Existing)
-export { AdvancedQueryBuilder, WhereClause, type WhereCondition, type QueryBuilderOptions } from './advanced-query-builder.js';
-export { SchemaValidator, type ValidationRule, type ValidationError } from './schema-validator.js';
-export { IntelligentCache, QueryCache, type CacheOptions, type CacheEntry } from './intelligent-cache.js';
+// Connection management
+export { ConnectionPool } from "./connection/pool.js";
 export { 
-  OptimizedPagination, 
-  PaginatedQueryBuilder,
-  type PaginationOptions, 
-  type PaginationResult,
-  type CursorPaginationOptions,
-  type CursorPaginationResult 
-} from './optimized-pagination.js';
-export { 
-  HooksManager,
-  MiddlewareManager, 
-  HooksMiddlewareSystem,
-  CommonHooks,
-  CommonMiddleware,
-  type HookFunction,
-  type MiddlewareFunction,
-  type HookContext
-} from './hooks-middleware.js';
+  AdvancedConnectionPool,
+  type AdvancedPoolOptions,
+  type ConnectionStats,
+  type ConnectionInfo
+} from './connection/advanced-pool.js';
 
-// New Advanced Features - Phase 1
+// Query system
+export { QueryBuilder } from "./query/query-builder.js";
+export { AdvancedQueryBuilder, WhereClause, type WhereCondition, type QueryBuilderOptions } from './query/advanced-query-builder.js';
 export { 
   RelationsManager,
   type RelationDefinition,
   type RelationsConfig,
   type PopulateOptions
 } from './query/relations.js';
-
 export { 
   AggregationsManager,
   AggregationBuilder,
@@ -57,13 +33,23 @@ export {
   type AggregationsConfig
 } from './query/aggregations.js';
 
+// Cache system
+export { IntelligentCache, QueryCache, type CacheOptions, type CacheEntry } from './cache/intelligent-cache.js';
 export { 
-  AdvancedConnectionPool,
-  type AdvancedPoolOptions,
-  type ConnectionStats,
-  type ConnectionInfo
-} from './connection/advanced-pool.js';
+  SemanticCache,
+  type SemanticCacheConfig,
+  type CacheEntry as SemanticCacheEntry,
+  type CacheStats as SemanticCacheStats
+} from './cache/semantic-cache.js';
 
+// Data manipulation
+export { BulkWriter, type BulkWriterOptions, type BulkOperation, type BulkResult } from './data/bulk-writer.js';
+export { 
+  DataStream,
+  StreamingManager,
+  type StreamingOptions,
+  type StreamingStats
+} from './data/streaming.js';
 export { 
   TimeSeriesManager,
   type TimeSeriesOptions,
@@ -72,14 +58,20 @@ export {
   type TimeSeriesResult
 } from './data/time-series.js';
 
-// New Advanced Features - Phase 2
+// Validation and constraints
+export { SchemaValidator, type ValidationRule, type ValidationError } from './validation/schema-validator.js';
+export { UniqueConstraintManager, type UniqueConstraintOptions } from './validation/unique-constraints.js';
 export { 
-  DataStream,
-  StreamingManager,
-  type StreamingOptions,
-  type StreamingStats
-} from './data/streaming.js';
+  SchemaEvolution,
+  MigrationBuilder,
+  MigrationHelpers,
+  type MigrationStep,
+  type SchemaEvolutionConfig,
+  type MigrationRecord
+} from './validation/evolution.js';
 
+// Observability
+export { Monitor } from "./observability/monitoring.js";
 export { 
   MetricsCollector,
   CassandraMetrics,
@@ -87,7 +79,6 @@ export {
   type MetricsConfig,
   type HistogramBucket
 } from './observability/metrics.js';
-
 export { 
   Tracer,
   Span,
@@ -98,22 +89,24 @@ export {
   type LogEntry
 } from './observability/tracing.js';
 
+// Middleware and hooks
+export { 
+  HooksManager,
+  MiddlewareManager, 
+  HooksMiddlewareSystem,
+  CommonHooks,
+  CommonMiddleware,
+  type HookFunction,
+  type MiddlewareFunction,
+  type HookContext
+} from './middleware/hooks-middleware.js';
 export { 
   MultiTenantManager,
   type MultiTenantConfig,
   type TenantContext
 } from './middleware/multi-tenant.js';
 
-export { 
-  SchemaEvolution,
-  MigrationBuilder,
-  MigrationHelpers,
-  type MigrationStep,
-  type SchemaEvolutionConfig,
-  type MigrationRecord
-} from './validation/evolution.js';
-
-// New Advanced Features - Phase 3
+// Integrations
 export { 
   GraphQLSchemaGenerator,
   CassandraDataSource,
@@ -121,39 +114,6 @@ export {
   type GraphQLField,
   type GraphQLType
 } from './integrations/graphql.js';
-
-export { 
-  BackupManager,
-  type BackupConfig,
-  type BackupMetadata,
-  type RestoreOptions
-} from './utils/backup.js';
-
-export { 
-  PerformanceOptimizer,
-  type OptimizationConfig,
-  type QueryAnalysis,
-  type OptimizationSuggestion,
-  type PerformanceMetrics
-} from './utils/optimization.js';
-
-export { 
-  SubscriptionManager,
-  type SubscriptionConfig,
-  type SubscriptionFilter,
-  type SubscriptionEvent,
-  type Subscription
-} from './integrations/subscriptions.js';
-
-// New Advanced Features - Phase 4
-export { 
-  AIMLManager,
-  type AIConfig,
-  type EmbeddingVector,
-  type SimilarityResult,
-  type QuerySuggestion
-} from './integrations/ai-ml.js';
-
 export { 
   EventStore,
   BaseAggregateRoot,
@@ -166,7 +126,6 @@ export {
   type AggregateRoot,
   type SagaStep
 } from './integrations/event-sourcing.js';
-
 export { 
   DistributedTransactionManager,
   CassandraParticipant,
@@ -178,14 +137,54 @@ export {
   type TransactionParticipant,
   type TransactionOperation
 } from './integrations/distributed-transactions.js';
-
 export { 
-  SemanticCache,
-  type SemanticCacheConfig,
-  type CacheEntry as SemanticCacheEntry,
-  type CacheStats as SemanticCacheStats
-} from './cache/semantic-cache.js';
+  SubscriptionManager,
+  type SubscriptionConfig,
+  type SubscriptionFilter,
+  type SubscriptionEvent,
+  type Subscription
+} from './integrations/subscriptions.js';
+export { 
+  AIMLManager,
+  type AIConfig,
+  type EmbeddingVector,
+  type SimilarityResult,
+  type QuerySuggestion
+} from './integrations/ai-ml.js';
 
+// Utils
+export { MigrationManager } from "./utils/migrations.js";
+export { PluginManager, CachePlugin, ValidationPlugin } from "./utils/plugin-system.js";
+export { DataExporter } from './utils/exporter.js';
+export { DataImporter, type ImportOptions } from './utils/importer.js';
+export { ModelLoader } from './utils/model-loader.js';
+export { StreamingQuery, createModelStream } from './utils/streaming.js';
+export { 
+  OptimizedPagination, 
+  PaginatedQueryBuilder,
+  type PaginationOptions, 
+  type PaginationResult,
+  type CursorPaginationOptions,
+  type CursorPaginationResult 
+} from './utils/optimized-pagination.js';
+export { 
+  BackupManager,
+  type BackupConfig,
+  type BackupMetadata,
+  type RestoreOptions
+} from './utils/backup.js';
+export { 
+  PerformanceOptimizer,
+  type OptimizationConfig,
+  type QueryAnalysis,
+  type OptimizationSuggestion,
+  type PerformanceMetrics
+} from './utils/optimization.js';
+
+// Elassandra integration
+export { ElassandraClient, type ElasticsearchConfig, type SearchQuery } from './elassandra/client.js';
+
+// Types
 export type {
   BaseModelInstance,
   BatchQuery,
@@ -209,9 +208,9 @@ export type {
   UDFDefinition,
   UDTDefinition,
   UUID,
-} from "./types.js";
+} from "./core/types.js";
 
-// Função de conveniência para criar cliente
+// Convenience function
 export function createClient(options: CassandraClientOptions): CassandraClient {
   return new CassandraClient(options);
 }

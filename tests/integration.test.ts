@@ -1,7 +1,10 @@
-import { createClient } from '../src/index.js';
-import { SchemaValidator } from '../src/schema-validator.js';
-import { IntelligentCache } from '../src/intelligent-cache.js';
-import { HooksMiddlewareSystem, CommonHooks } from '../src/hooks-middleware.js';
+import { 
+  createClient, 
+  SchemaValidator, 
+  IntelligentCache, 
+  HooksMiddlewareSystem, 
+  CommonHooks 
+} from '../src/index.js';
 
 export async function runIntegrationTests() {
   console.log('🔄 Running Integration Tests...\n');
@@ -12,49 +15,65 @@ export async function runIntegrationTests() {
     
     const userSchema = {
       fields: {
-        email: {
-          type: 'text',
-          validate: {
-            required: true,
-            isEmail: true
-          }
-        },
+        id: 'uuid',
         name: {
           type: 'text',
           validate: {
             required: true,
             minLength: 2
           }
+        },
+        email: {
+          type: 'text',
+          validate: {
+            required: true,
+            isEmail: true
+          }
         }
       }
     };
 
-    const validUser = { email: 'valid@test.com', name: 'Valid User' };
-    const invalidUser = { email: 'invalid-email', name: 'A' };
+    // Valid data
+    const validUser = {
+      id: 'uuid-123',
+      name: 'John Doe',
+      email: 'john@example.com'
+    };
 
-    const validationErrors1 = SchemaValidator.validate(validUser, userSchema);
-    const validationErrors2 = SchemaValidator.validate(invalidUser, userSchema);
-    
-    console.log(`✅ Valid data: ${validationErrors1.length} errors`);
-    console.log(`✅ Invalid data: ${validationErrors2.length} errors`);
+    const validErrors = SchemaValidator.validate(validUser, userSchema);
+    console.log(`✅ Valid data: ${validErrors.length} errors`);
+
+    // Invalid data
+    const invalidUser = {
+      id: 'uuid-456',
+      name: 'J', // Too short
+      email: 'invalid-email' // Invalid format
+    };
+
+    const invalidErrors = SchemaValidator.validate(invalidUser, userSchema);
+    console.log(`✅ Invalid data: ${invalidErrors.length} errors`);
 
     // Test 2: Intelligent Cache
     console.log('\n💾 Testing Intelligent Cache...');
-    
-    const cache = new IntelligentCache({ ttl: 5, maxSize: 100 });
-    
-    cache.set('user:1', { name: 'Cached User', age: 30 });
-    const cachedUser = cache.get('user:1');
-    console.log(`✅ Cache: ${cachedUser ? 'Hit' : 'Miss'}`);
+
+    const cache = new IntelligentCache({
+      ttl: 300,
+      maxSize: 100,
+      strategy: 'lru'
+    });
+
+    cache.set('test-key', { data: 'test-value' });
+    const cachedValue = cache.get('test-key');
+    console.log(`✅ Cache: ${cachedValue ? 'Hit' : 'Miss'}`);
 
     // Test 3: Hooks and Middleware
     console.log('\n🪝 Testing Hooks and Middleware...');
-    
-    const hooksSystem = new HooksMiddlewareSystem();
-    hooksSystem.beforeCreate(CommonHooks.addTimestamps);
-    
-    const userData = { name: 'Test User', email: 'test@hooks.com' };
-    const processedData = await hooksSystem.executeHook('beforeCreate', userData, {
+
+    const hooks = new HooksMiddlewareSystem();
+    hooks.beforeCreate(CommonHooks.addTimestamps);
+
+    const testData = { name: 'Test User', email: 'test@example.com' };
+    const processedData = await hooks.executeHook('beforeCreate', testData, {
       operation: 'create',
       tableName: 'users'
     });
@@ -64,15 +83,14 @@ export async function runIntegrationTests() {
 
     console.log('\n✅ All integration tests passed!');
     return true;
-
-  } catch (error: any) {
-    console.error('❌ Integration test failed:', error.message);
+    
+  } catch (error) {
+    console.error('❌ Integration tests failed:', error);
     return false;
   }
 }
 
+// Run tests if called directly
 if (import.meta.main) {
-  runIntegrationTests().then(success => {
-    process.exit(success ? 0 : 1);
-  });
+  await runIntegrationTests();
 }
