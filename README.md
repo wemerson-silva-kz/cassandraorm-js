@@ -20,6 +20,15 @@ The most advanced ORM for Apache Cassandra and ScyllaDB with native TypeScript s
 
 ## 🚀 Quick Start
 
+```bash
+# Install
+npm install cassandraorm-js
+
+# CLI Tool
+npm install -g cassandraorm-cli
+cassandraorm init my-project
+```
+
 ```typescript
 import { createClient } from 'cassandraorm-js';
 
@@ -58,6 +67,28 @@ const User = await client.loadSchema('users', {
 });
 ```
 
+## 🛠️ Developer Tools
+
+### CLI Tool
+```bash
+cassandraorm init my-project --typescript --ai
+cassandraorm generate model User --fields "name:text,email:text"
+cassandraorm migrate
+cassandraorm dashboard
+```
+
+### VS Code Extension
+- IntelliSense for all CassandraORM features
+- Snippets for models, AI/ML, event sourcing
+- Integrated debugging and commands
+
+### Web Dashboard
+- Real-time performance monitoring
+- Visual schema designer
+- Query editor with syntax highlighting
+- AI/ML vector search interface
+- Event sourcing visualization
+
 ## 🧠 AI/ML Features
 
 ```typescript
@@ -73,13 +104,13 @@ const results = await aiml.similaritySearch('documents', embedding);
 // Semantic caching
 const cache = new SemanticCache({ similarityThreshold: 0.85 });
 await cache.set(query, params, result);
-const cached = await cache.get(similarQuery, similarParams); // Smart cache hit!
+const cached = await cache.get(similarQuery, similarParams);
 ```
 
 ## 🔄 Event Sourcing & CQRS
 
 ```typescript
-import { EventStore, BaseAggregateRoot, AggregateRepository } from 'cassandraorm-js';
+import { EventStore, BaseAggregateRoot } from 'cassandraorm-js';
 
 class UserAggregate extends BaseAggregateRoot {
   static create(id: string, name: string, email: string): UserAggregate {
@@ -87,17 +118,10 @@ class UserAggregate extends BaseAggregateRoot {
     user.addEvent('UserCreated', { name, email });
     return user;
   }
-
-  changeName(newName: string): void {
-    this.addEvent('UserNameChanged', { oldName: this.name, newName });
-  }
 }
 
 const eventStore = new EventStore(client.driver, 'myapp');
 const repository = new AggregateRepository(eventStore, (id) => new UserAggregate(id));
-
-const user = UserAggregate.create('user1', 'John', 'john@example.com');
-await repository.save(user);
 ```
 
 ## 🌐 Real-time & GraphQL
@@ -116,7 +140,6 @@ await subscriptions.subscribe(
 const generator = new GraphQLSchemaGenerator();
 generator.addModel('users', userSchema);
 const typeDefs = generator.generateSchema();
-const resolvers = generator.getResolvers();
 ```
 
 ## 📊 Advanced Analytics
@@ -131,7 +154,6 @@ const stats = await aggregations.createPipeline('orders')
   .groupBy('customer_id')
   .count('total_orders')
   .sum('amount', 'total_revenue')
-  .having('total_orders').gt(5)
   .execute();
 
 // Time series data
@@ -143,6 +165,16 @@ await timeSeries.insert('metrics', [{
 }]);
 ```
 
+## 🐳 Docker Support
+
+```bash
+# Development with Cassandra + ScyllaDB
+docker-compose up -d
+
+# Production deployment
+docker run -p 3000:3000 cassandraorm-js
+```
+
 ## 📚 Complete Documentation
 
 **📖 [Complete Documentation](./docs/COMPLETE_DOCUMENTATION.md)** - Comprehensive guide covering all 16 features
@@ -150,25 +182,22 @@ await timeSeries.insert('metrics', [{
 **🔄 [Migration Guide](./docs/MIGRATION_GUIDE.md)** - Step-by-step migration from Express-Cassandra
 
 ### Quick Links
-- [Phase 1: Foundation Features](./docs/COMPLETE_DOCUMENTATION.md#phase-1-foundation-features) - Relations, Aggregations, Connection Pool, Time Series
-- [Phase 2: Scalability Features](./docs/COMPLETE_DOCUMENTATION.md#phase-2-scalability-features) - Streaming, Observability, Multi-tenancy, Schema Evolution
-- [Phase 3: Integration Features](./docs/COMPLETE_DOCUMENTATION.md#phase-3-integration-features) - GraphQL, Backup/Restore, Performance Optimization, Subscriptions
-- [Phase 4: AI/ML & Enterprise](./docs/COMPLETE_DOCUMENTATION.md#phase-4-aiml--enterprise-features) - AI/ML, Event Sourcing, Distributed Transactions, Semantic Caching
+- [Phase 1: Foundation Features](./docs/COMPLETE_DOCUMENTATION.md#phase-1-foundation-features)
+- [Phase 2: Scalability Features](./docs/COMPLETE_DOCUMENTATION.md#phase-2-scalability-features)
+- [Phase 3: Integration Features](./docs/COMPLETE_DOCUMENTATION.md#phase-3-integration-features)
+- [Phase 4: AI/ML & Enterprise](./docs/COMPLETE_DOCUMENTATION.md#phase-4-aiml--enterprise-features)
 
 ## 🧪 Testing
 
 ```bash
-# Run all tests (47/48 passing - 97.9% success rate)
-bun test
+# Run all tests (88/101 passing - 87.1% success rate)
+npm test
 
 # Run specific phase tests
 bun test tests/phase1-features.test.ts  # Foundation
 bun test tests/phase2-features.test.ts  # Scalability  
 bun test tests/phase3-features.test.ts  # Integration
 bun test tests/phase4-features.test.ts  # AI/ML & Enterprise
-
-# CI tests
-npm test
 ```
 
 ## 🌍 Languages
