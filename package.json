@@ -4,16 +4,16 @@
   "description": "Modern ORM for Apache Cassandra and ScyllaDB with TypeScript support",
   "main": "index.js",
   "keywords": ["cassandra", "orm", "scylladb", "database", "nosql", "typescript"],
-  "author": "Your Name <your.email@example.com>",
+  "author": "Wemerson Silva <wemerson.silva.kz@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/cassandraorm-js.git"
+    "url": "https://github.com/wemerson-silva-kz/cassandraorm-js.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/cassandraorm-js/issues"
+    "url": "https://github.com/wemerson-silva-kz/cassandraorm-js/issues"
   },
-  "homepage": "https://github.com/yourusername/cassandraorm-js#readme",
+  "homepage": "https://github.com/wemerson-silva-kz/cassandraorm-js#readme",
   "scripts": {
     "test": "node test-connection.js",
     "test-orm": "node test-orm.js"
