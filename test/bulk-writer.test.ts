@@ -10,21 +10,21 @@ describe('Bulk Writer & Unique Constraints', () => {
       clientOptions: {
         contactPoints: ['127.0.0.1'],
         localDataCenter: 'datacenter1',
-        keyspace: 'test_bulk',
+        keyspace: 'phase1_test',
       }
     });
 
     await client.connect();
     
     await client.execute(`
-      CREATE KEYSPACE IF NOT EXISTS test_bulk
+      CREATE KEYSPACE IF NOT EXISTS phase1_test
       WITH REPLICATION = {
         'class': 'SimpleStrategy',
         'replication_factor': 1
       }
     `);
 
-    await client.execute('USE test_bulk');
+    await client.execute('USE phase1_test');
 
     await client.execute(`
       CREATE TABLE IF NOT EXISTS test_users (
@@ -35,7 +35,7 @@ describe('Bulk Writer & Unique Constraints', () => {
       )
     `);
 
-    uniqueManager = new UniqueConstraintManager(client.driver, 'test_bulk');
+    uniqueManager = new UniqueConstraintManager(client.driver, 'phase1_test');
     await uniqueManager.createUniqueTable('test_users', ['email']);
   });
 
@@ -63,7 +63,7 @@ describe('Bulk Writer & Unique Constraints', () => {
   });
 
   it('should insert multiple records', async () => {
-    const bulkWriter = new BulkWriter(client.driver, 'test_bulk');
+    const bulkWriter = new BulkWriter(client.driver, 'phase1_test');
     
     const users = [
       { id: client.uuid(), email: 'user1@test.com', name: 'User 1', age: 25 },

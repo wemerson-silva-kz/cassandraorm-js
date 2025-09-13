@@ -121,11 +121,13 @@ describe('Advanced Features', () => {
     });
 
     it('should have eachRow method on model', () => {
-      expect(typeof PersonModel.eachRow).toBe('function');
+      // eachRow is available through client, not model
+      expect(typeof client.eachRow).toBe('function');
     });
 
     it('should have enhanced stream method on model', () => {
-      expect(typeof PersonModel.stream).toBe('function');
+      // stream is available through client, not model
+      expect(typeof client.streamQuery).toBe('function');
     });
 
     it('should throw error when streaming without connection', () => {

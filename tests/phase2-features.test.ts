@@ -252,12 +252,13 @@ describe('Phase 2 Advanced Features', () => {
   });
 
   it('should handle schema evolution', async () => {
-    // Create a migration with unique ID
+    // Create a migration with unique column name
     const migrationId = `migration_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const columnName = `test_column_${Date.now()}`;
     
     const migration = schemaEvolution
-      .migration(migrationId, 'Add description column to test_data')
-      .addColumn('test_data', 'description', 'text')
+      .migration(migrationId, `Add ${columnName} column to test_data`)
+      .addColumn('test_data', columnName, 'text')
       .build();
 
     // Check pending migrations

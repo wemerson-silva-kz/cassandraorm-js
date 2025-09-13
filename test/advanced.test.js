@@ -1,4 +1,4 @@
-const { CassandraORM } = require('../index');
+const { CassandraORM } = require('../src/index.js');
 const { test, expect, beforeAll, afterAll } = require('bun:test');
 
 let orm;
