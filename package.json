@@ -28,9 +28,10 @@
   },
   "homepage": "https://github.com/wemerson-silva-kz/cassandraorm-js#readme",
   "scripts": {
-    "test": "node test-basic-node.js",
+    "test": "node test-ci.js",
     "test:bun": "bun test test/*.test.js",
     "test:node": "node test-basic-node.js",
+    "test:ci": "node test-ci.js",
     "test-connection": "node test-connection.js",
     "test-orm": "node test-orm.js",
     "test-advanced": "bun test test/advanced.test.js",
