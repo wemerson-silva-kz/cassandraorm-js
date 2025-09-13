@@ -4,14 +4,7 @@
   "description": "Modern ORM for Apache Cassandra and ScyllaDB with TypeScript support",
   "main": "index.js",
   "types": "index.d.ts",
-  "keywords": [
-    "cassandra",
-    "orm",
-    "scylladb",
-    "database",
-    "nosql",
-    "typescript"
-  ],
+  "keywords": ["cassandra", "orm", "scylladb", "database", "nosql", "typescript"],
   "author": "Wemerson Silva <wemerson.silva.kz@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -23,20 +16,19 @@
   },
   "homepage": "https://github.com/wemerson-silva-kz/cassandraorm-js#readme",
   "scripts": {
-    "test": "mocha test/*.test.js --timeout 10000",
-    "test-connection": "node test-connection.js",
-    "test-orm": "node test-orm.js",
-    "lint": "eslint .",
-    "prepublishOnly": "npm test"
+    "test": "bun test test/*.test.js",
+    "test-connection": "bun run test-connection.js",
+    "test-orm": "bun run test-orm.js",
+    "lint": "bun run eslint .",
+    "prepublishOnly": "bun test"
   },
   "dependencies": {
     "cassandra-driver": "^4.7.2"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "eslint": "^8.57.1",
-    "mocha": "^10.8.2",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0"
   },
   "engines": {
     "node": ">=16.0.0"
