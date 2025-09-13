@@ -1,0 +1,37 @@
+{
+  "name": "cassandraorm-js",
+  "version": "1.0.0",
+  "description": "Modern ORM for Apache Cassandra and ScyllaDB with TypeScript support",
+  "main": "index.js",
+  "keywords": ["cassandra", "orm", "scylladb", "database", "nosql", "typescript"],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/cassandraorm-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/cassandraorm-js/issues"
+  },
+  "homepage": "https://github.com/yourusername/cassandraorm-js#readme",
+  "scripts": {
+    "test": "node test-connection.js",
+    "test-orm": "node test-orm.js"
+  },
+  "dependencies": {
+    "cassandra-driver": "^4.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "index.js",
+    "README.md",
+    "LICENSE",
+    "docs/"
+  ]
+}
