@@ -15,6 +15,30 @@ export { ModelLoader } from './utils/model-loader.js';
 export { StreamingQuery, createModelStream } from './utils/streaming.js';
 export { UniqueConstraintManager, type UniqueConstraintOptions } from './unique-constraints.js';
 export { BulkWriter, type BulkWriterOptions, type BulkOperation, type BulkResult } from './bulk-writer.js';
+
+// Advanced Features - High Priority
+export { AdvancedQueryBuilder, WhereClause, type WhereCondition, type QueryBuilderOptions } from './advanced-query-builder.js';
+export { SchemaValidator, type ValidationRule, type ValidationError } from './schema-validator.js';
+export { IntelligentCache, QueryCache, type CacheOptions, type CacheEntry } from './intelligent-cache.js';
+export { 
+  OptimizedPagination, 
+  PaginatedQueryBuilder,
+  type PaginationOptions, 
+  type PaginationResult,
+  type CursorPaginationOptions,
+  type CursorPaginationResult 
+} from './optimized-pagination.js';
+export { 
+  HooksManager,
+  MiddlewareManager, 
+  HooksMiddlewareSystem,
+  CommonHooks,
+  CommonMiddleware,
+  type HookFunction,
+  type MiddlewareFunction,
+  type HookContext
+} from './hooks-middleware.js';
+
 export type {
   BaseModelInstance,
   BatchQuery,

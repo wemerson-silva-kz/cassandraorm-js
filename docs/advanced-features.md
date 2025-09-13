@@ -1,211 +1,497 @@
-# Advanced Features - CassandraORM JS
+# Funcionalidades Avançadas
 
-## Connection Pooling
+O CassandraORM JS oferece funcionalidades avançadas que melhoram significativamente a experiência de desenvolvimento com Cassandra.
 
-Automatic connection pool management for optimal performance:
+## 🔍 Query Builder Avançado
 
-```javascript
-const orm = new CassandraORM({
-  contactPoints: ['localhost'],
-  pooling: {
-    coreConnectionsPerHost: { local: 4, remote: 2 },
-    maxConnectionsPerHost: { local: 8, remote: 4 },
-    maxRequestsPerConnection: 32768
-  }
-});
+### Uso Básico
 
-// Get pool statistics
-const stats = orm.getMetrics().connectionPool;
-```
+```typescript
+import { createClient, AdvancedQueryBuilder } from 'cassandraorm-js';
 
-## Query Builder
+const client = createClient({ /* config */ });
+await client.connect();
 
-Fluent interface for building complex queries:
+const queryBuilder = new AdvancedQueryBuilder(client.driver, 'users', 'myapp');
 
-```javascript
-// Select with conditions
-const users = await orm.query('users')
-  .select(['name', 'email'])
-  .where('age', '>', 18)
-  .orderBy('name', 'ASC')
-  .limit(10)
-  .all();
-
-// Insert
-await orm.query('users')
-  .insert({
-    id: orm.uuid(),
-    name: 'John Doe',
-    email: 'john@example.com'
-  })
-  .execute();
-
-// Update
-await orm.query('users')
-  .update({ age: 31 })
-  .where('email', '=', 'john@example.com')
-  .execute();
-
-// Delete
-await orm.query('users')
-  .delete()
-  .where('age', '<', 18)
+// Query complexa
+const users = await queryBuilder
+  .select(['name', 'email', 'age'])
+  .where('status').eq('active')
+  .and('age').gte(18)
+  .and('category').in(['premium', 'gold'])
+  .orderBy('created_at', 'DESC')
+  .limit(50)
+  .allowFiltering()
   .execute();
 ```
 
-## Migrations
+### Operadores Disponíveis
 
-Database schema versioning and migration system:
+```typescript
+// Comparação
+.where('age').eq(25)        // age = 25
+.where('age').gt(18)        // age > 18
+.where('age').gte(18)       // age >= 18
+.where('age').lt(65)        // age < 65
+.where('age').lte(65)       // age <= 65
 
-```javascript
-// Create a new migration
-await orm.createMigration('add_user_table');
-
-// Run pending migrations
-await orm.migrate();
-
-// Rollback migrations
-await orm.rollback(1);
-
-// Check migration status
-await orm.migrationManager.status();
+// Arrays e Collections
+.where('status').in(['active', 'premium'])  // status IN (...)
+.where('tags').contains('featured')         // tags CONTAINS 'featured'
+.where('metadata').containsKey('priority')  // metadata CONTAINS KEY 'priority'
 ```
 
-### Migration File Example
+### Métodos Especiais
 
-```javascript
-// migrations/20250913_add_user_table.js
-module.exports = {
-  up: async (client) => {
-    await client.execute(`
-      CREATE TABLE users (
-        id uuid PRIMARY KEY,
-        name text,
-        email text,
-        created_at timestamp
-      )
-    `);
-  },
+```typescript
+// Contar registros
+const count = await queryBuilder
+  .where('status').eq('active')
+  .count();
 
-  down: async (client) => {
-    await client.execute('DROP TABLE users');
+// Primeiro resultado
+const user = await queryBuilder
+  .where('email').eq('user@example.com')
+  .first();
+
+// Construir query sem executar
+const { query, params } = queryBuilder
+  .select('*')
+  .where('id').eq(userId)
+  .build();
+```
+
+## ✅ Validação de Schema
+
+### Definindo Validações
+
+```typescript
+const userSchema = {
+  fields: {
+    email: {
+      type: 'text',
+      validate: {
+        required: true,
+        isEmail: true
+      }
+    },
+    name: {
+      type: 'text',
+      validate: {
+        required: true,
+        minLength: 2,
+        maxLength: 100
+      }
+    },
+    age: {
+      type: 'int',
+      validate: {
+        min: 0,
+        max: 120
+      }
+    },
+    status: {
+      type: 'text',
+      validate: {
+        enum: ['active', 'inactive', 'pending']
+      }
+    },
+    password: {
+      type: 'text',
+      validate: {
+        pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/,
+        custom: (value) => {
+          if (value.includes('password')) {
+            return 'Password cannot contain the word "password"';
+          }
+          return true;
+        }
+      }
+    }
   }
 };
 ```
 
-## Monitoring & Metrics
+### Validando Dados
 
-Built-in monitoring with structured logging:
+```typescript
+import { SchemaValidator } from 'cassandraorm-js';
 
-```javascript
-const orm = new CassandraORM({
-  monitoring: {
-    enabled: true,
-    logLevel: 'info'
-  }
-});
+const userData = {
+  email: 'user@example.com',
+  name: 'John Doe',
+  age: 25,
+  status: 'active'
+};
 
-// Get comprehensive metrics
-const metrics = orm.getMetrics();
-console.log(metrics.queries.total); // Total queries executed
-console.log(metrics.performance.avgResponseTime); // Average response time
+const errors = SchemaValidator.validate(userData, userSchema);
 
-// Health check endpoint
-const health = orm.getHealthCheck();
-console.log(health.status); // 'healthy' or 'unhealthy'
+if (errors.length > 0) {
+  console.log('Validation errors:');
+  errors.forEach(error => {
+    console.log(`- ${error.field}: ${error.message}`);
+  });
+}
 ```
 
-## Plugin System
+### Validações Disponíveis
 
-Extensible architecture with built-in and custom plugins:
+| Regra | Descrição | Exemplo |
+|-------|-----------|---------|
+| `required` | Campo obrigatório | `required: true` |
+| `min/max` | Valor mínimo/máximo (números) | `min: 0, max: 100` |
+| `minLength/maxLength` | Tamanho mínimo/máximo (strings) | `minLength: 2, maxLength: 50` |
+| `pattern` | Regex pattern | `pattern: /^\d{3}-\d{3}-\d{4}$/` |
+| `isEmail` | Validação de email | `isEmail: true` |
+| `isUUID` | Validação de UUID | `isUUID: true` |
+| `enum` | Valores permitidos | `enum: ['active', 'inactive']` |
+| `custom` | Função personalizada | `custom: (value) => value !== 'admin'` |
 
-### Built-in Plugins
+## 💾 Cache Inteligente
 
-```javascript
-// Cache plugin
-orm.use('cache', {
-  ttl: 300000, // 5 minutes
+### Configuração Básica
+
+```typescript
+import { IntelligentCache, QueryCache } from 'cassandraorm-js';
+
+// Cache geral
+const cache = new IntelligentCache({
+  ttl: 300,        // 5 minutos
+  maxSize: 1000,   // Máximo 1000 itens
+  strategy: 'lru'  // Least Recently Used
+});
+
+// Cache de queries
+const queryCache = new QueryCache({
+  ttl: 600,        // 10 minutos
+  maxSize: 500
+});
+```
+
+### Uso do Cache
+
+```typescript
+// Cache simples
+cache.set('user:123', userData, 600); // TTL personalizado
+const user = cache.get('user:123');
+
+// Cache de queries
+const query = 'SELECT * FROM users WHERE status = ?';
+const params = ['active'];
+
+// Verificar cache primeiro
+let result = queryCache.get(query, params);
+if (!result) {
+  result = await client.execute(query, params);
+  queryCache.set(query, params, result.rows);
+}
+```
+
+### Estratégias de Eviction
+
+```typescript
+// LRU - Least Recently Used (padrão)
+const lruCache = new IntelligentCache({ strategy: 'lru' });
+
+// LFU - Least Frequently Used
+const lfuCache = new IntelligentCache({ strategy: 'lfu' });
+
+// FIFO - First In, First Out
+const fifoCache = new IntelligentCache({ strategy: 'fifo' });
+```
+
+### Invalidação de Cache
+
+```typescript
+// Invalidar item específico
+cache.delete('user:123');
+
+// Invalidar por padrão
+queryCache.invalidate('SELECT * FROM users*');
+
+// Limpar tudo
+cache.clear();
+```
+
+### Estatísticas
+
+```typescript
+const stats = cache.stats();
+console.log(`Cache size: ${stats.size}`);
+console.log(`Hit rate: ${(stats.hitRate * 100).toFixed(1)}%`);
+console.log(`Total hits: ${stats.totalHits}`);
+```
+
+## 📄 Paginação Otimizada
+
+### Paginação com Token (Recomendada)
+
+```typescript
+import { OptimizedPagination } from 'cassandraorm-js';
+
+const pagination = new OptimizedPagination(client.driver, 'myapp');
+
+// Primeira página
+const page1 = await pagination.paginate(
+  'SELECT * FROM users WHERE status = ?',
+  ['active'],
+  { limit: 20 }
+);
+
+console.log(`Found ${page1.data.length} users`);
+console.log(`Has more: ${page1.hasMore}`);
+
+// Próxima página
+if (page1.pageState) {
+  const page2 = await pagination.paginate(
+    'SELECT * FROM users WHERE status = ?',
+    ['active'],
+    { limit: 20, pageState: page1.pageState }
+  );
+}
+```
+
+### Paginação com Cursor
+
+```typescript
+// Primeira página
+const page1 = await pagination.cursorPaginate('users', {
+  limit: 20,
+  orderBy: 'created_at',
+  direction: 'DESC'
+});
+
+// Próxima página
+if (page1.hasNext) {
+  const page2 = await pagination.cursorPaginate('users', {
+    limit: 20,
+    cursor: page1.nextCursor,
+    orderBy: 'created_at',
+    direction: 'DESC'
+  });
+}
+```
+
+### Auto-Paginação para Grandes Datasets
+
+```typescript
+// Processar todos os dados em lotes
+for await (const batch of pagination.autoPaginate('SELECT * FROM users', [], 1000)) {
+  console.log(`Processing batch of ${batch.length} users`);
+  // Processar lote
+}
+
+// Streaming com callback
+await pagination.streamPaginate(
+  'SELECT * FROM users',
+  [],
+  async (batch) => {
+    // Processar cada lote
+    await processBatch(batch);
+  },
+  1000 // Tamanho do lote
+);
+```
+
+## 🪝 Hooks e Middlewares
+
+### Configuração de Hooks
+
+```typescript
+import { HooksMiddlewareSystem, CommonHooks } from 'cassandraorm-js';
+
+const hooks = new HooksMiddlewareSystem();
+
+// Hooks de timestamps
+hooks.beforeCreate(CommonHooks.addTimestamps);
+hooks.beforeUpdate(CommonHooks.updateTimestamp);
+
+// Hook de validação
+hooks.beforeCreate(CommonHooks.validate(userSchema));
+
+// Hook de auditoria
+hooks.afterCreate(CommonHooks.auditLog('users'));
+
+// Hook personalizado
+hooks.beforeCreate(async (data) => {
+  if (data.password) {
+    data.password = await hashPassword(data.password);
+  }
+  return data;
+});
+```
+
+### Middlewares
+
+```typescript
+// Middleware de logging
+hooks.use(CommonMiddleware.logging());
+
+// Middleware de rate limiting
+hooks.use(CommonMiddleware.rateLimit(100, 60000)); // 100 req/min
+
+// Middleware de performance
+hooks.use(CommonMiddleware.performanceMonitor());
+
+// Middleware personalizado
+hooks.use(async (data, next) => {
+  console.log('Processing:', data);
+  const result = await next();
+  console.log('Completed');
+  return result;
+});
+```
+
+### Execução de Operações com Hooks
+
+```typescript
+// Executar operação completa com hooks
+const result = await hooks.executeOperation(
+  'create',
+  userData,
+  { operation: 'create', tableName: 'users' },
+  async () => {
+    // Operação real
+    return await client.execute(
+      'INSERT INTO users (id, name, email) VALUES (?, ?, ?)',
+      [userData.id, userData.name, userData.email]
+    );
+  }
+);
+```
+
+### Hooks Comuns Disponíveis
+
+```typescript
+// Timestamps automáticos
+CommonHooks.addTimestamps     // Adiciona created_at e updated_at
+CommonHooks.updateTimestamp   // Atualiza updated_at
+
+// Validação
+CommonHooks.validate(schema)  // Valida dados contra schema
+
+// Soft delete
+CommonHooks.softDelete        // Marca como deletado
+
+// Sanitização
+CommonHooks.sanitize          // Remove campos sensíveis
+
+// Auditoria
+CommonHooks.auditLog(table)   // Log de operações
+
+// Cache
+CommonHooks.invalidateCache(key) // Invalida cache
+```
+
+## 🔧 Integração com Modelos
+
+### Usando com CassandraClient
+
+```typescript
+const client = createClient({ /* config */ });
+await client.connect();
+
+// Query builder integrado
+const User = await client.loadSchema('users', userSchema);
+
+// Adicionar query builder ao modelo
+User.query = () => new AdvancedQueryBuilder(client.driver, 'users', client.keyspace);
+
+// Usar
+const activeUsers = await User.query()
+  .where('status').eq('active')
+  .execute();
+```
+
+### Cache Automático
+
+```typescript
+// Cache integrado ao cliente
+client.enableCache({
+  ttl: 300,
   maxSize: 1000
 });
 
-// Validation plugin
-orm.use('validation');
+// Queries serão automaticamente cacheadas
+const users = await client.execute('SELECT * FROM users WHERE status = ?', ['active']);
 ```
 
-### Custom Plugin
+## 📊 Exemplos Práticos
 
-```javascript
-const customPlugin = {
-  name: 'audit',
-  install(pluginManager) {
-    pluginManager.addHook('afterInsert', async (context) => {
-      console.log(`Audit: Inserted into ${context.model}`);
-    });
+### Sistema de Usuários Completo
+
+```typescript
+import { 
+  createClient, 
+  AdvancedQueryBuilder, 
+  SchemaValidator,
+  IntelligentCache,
+  HooksMiddlewareSystem,
+  CommonHooks 
+} from 'cassandraorm-js';
+
+class UserService {
+  private client: any;
+  private cache: IntelligentCache;
+  private hooks: HooksMiddlewareSystem;
+
+  constructor() {
+    this.client = createClient({ /* config */ });
+    this.cache = new IntelligentCache({ ttl: 300 });
+    this.hooks = new HooksMiddlewareSystem();
+    
+    // Setup hooks
+    this.hooks.beforeCreate(CommonHooks.addTimestamps);
+    this.hooks.beforeCreate(CommonHooks.validate(userSchema));
+    this.hooks.afterFind(CommonHooks.sanitize);
   }
-};
 
-orm.use(customPlugin);
-```
+  async findActiveUsers(limit = 20, pageState?: string) {
+    const cacheKey = `active_users:${limit}:${pageState || 'first'}`;
+    
+    // Check cache
+    let result = this.cache.get(cacheKey);
+    if (result) return result;
 
-## Advanced Query Features
+    // Query with advanced builder
+    const queryBuilder = new AdvancedQueryBuilder(this.client.driver, 'users', 'myapp');
+    
+    result = await queryBuilder
+      .select(['id', 'name', 'email', 'status'])
+      .where('status').eq('active')
+      .orderBy('created_at', 'DESC')
+      .limit(limit)
+      .allowFiltering()
+      .execute();
 
-### Model Query Builder
-
-```javascript
-// Use query builder on specific model
-const activeUsers = await User.query()
-  .select('*')
-  .where('status', '=', 'active')
-  .where('last_login', '>', new Date('2024-01-01'))
-  .orderBy('created_at', 'DESC')
-  .limit(50)
-  .all();
-```
-
-### Batch Operations with Monitoring
-
-```javascript
-const batch = orm.batch();
-
-batch.insert(User, { id: orm.uuid(), name: 'User 1' });
-batch.insert(User, { id: orm.uuid(), name: 'User 2' });
-batch.update(User, { id: userId }, { status: 'active' });
-
-await batch.execute(); // Automatically monitored and logged
-```
-
-## Performance Optimization
-
-### Connection Pool Tuning
-
-```javascript
-const orm = new CassandraORM({
-  pooling: {
-    coreConnectionsPerHost: {
-      [cassandra.distance.local]: 4,
-      [cassandra.distance.remote]: 2
-    },
-    maxConnectionsPerHost: {
-      [cassandra.distance.local]: 10,
-      [cassandra.distance.remote]: 5
-    },
-    heartBeatInterval: 30000
+    // Cache result
+    this.cache.set(cacheKey, result, 300);
+    
+    return result;
   }
-});
+
+  async createUser(userData: any) {
+    return this.hooks.executeOperation(
+      'create',
+      userData,
+      { operation: 'create', tableName: 'users' },
+      async () => {
+        const processedData = await this.hooks.executeHook('beforeCreate', userData);
+        
+        await this.client.execute(
+          'INSERT INTO users (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+          [processedData.id, processedData.name, processedData.email, processedData.created_at, processedData.updated_at]
+        );
+        
+        // Invalidate cache
+        this.cache.invalidate('active_users:*');
+        
+        return processedData;
+      }
+    );
+  }
+}
 ```
 
-### Query Optimization
-
-```javascript
-// Use prepared statements (automatic)
-const users = await User.find({ status: 'active' });
-
-// Monitor slow queries
-const metrics = orm.getMetrics();
-console.log(metrics.performance.slowQueries);
-```
-
-## 🌍 Languages
-
-- [English](advanced-features.md) (current)
-- [Português](advanced-features.pt.md)
+As funcionalidades avançadas estão prontas e testadas! 🚀
