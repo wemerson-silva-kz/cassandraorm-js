@@ -72,6 +72,47 @@ export {
   type TimeSeriesResult
 } from './data/time-series.js';
 
+// New Advanced Features - Phase 2
+export { 
+  DataStream,
+  StreamingManager,
+  type StreamingOptions,
+  type StreamingStats
+} from './data/streaming.js';
+
+export { 
+  MetricsCollector,
+  CassandraMetrics,
+  type MetricValue,
+  type MetricsConfig,
+  type HistogramBucket
+} from './observability/metrics.js';
+
+export { 
+  Tracer,
+  Span,
+  CassandraTracing,
+  type TracingConfig,
+  type SpanContext,
+  type SpanData,
+  type LogEntry
+} from './observability/tracing.js';
+
+export { 
+  MultiTenantManager,
+  type MultiTenantConfig,
+  type TenantContext
+} from './middleware/multi-tenant.js';
+
+export { 
+  SchemaEvolution,
+  MigrationBuilder,
+  MigrationHelpers,
+  type MigrationStep,
+  type SchemaEvolutionConfig,
+  type MigrationRecord
+} from './validation/evolution.js';
+
 export type {
   BaseModelInstance,
   BatchQuery,
