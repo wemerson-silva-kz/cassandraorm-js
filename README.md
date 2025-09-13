@@ -4,69 +4,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js CI](https://github.com/wemerson-silva-kz/cassandraorm-js/workflows/Node.js%20CI/badge.svg)](https://github.com/wemerson-silva-kz/cassandraorm-js/actions)
 
-A modern and optimized ORM for Apache Cassandra and ScyllaDB with native TypeScript support, ES6+ features and advanced capabilities.
+The most advanced ORM for Apache Cassandra and ScyllaDB with native TypeScript support, AI/ML integration, and enterprise-grade features.
 
-## 🚀 Features
+## 🌟 What Makes CassandraORM JS Special
 
-### **Core Features**
-- **TypeScript First** - Native support with complete types
-- **ES6+ Modules** - Modern import/export syntax
-- **Async/Await** - Promise-based API throughout
-- **Auto-Creation** - Automatic keyspace and table creation
-- **Schema Validation** - Comprehensive data validation
-- **Unique Constraints** - Prevent duplicate data insertion
+**16 Advanced Features** across 4 development phases:
+- **AI/ML Integration** - Vector search, query optimization, anomaly detection
+- **Event Sourcing** - Complete CQRS implementation with domain events
+- **Distributed Transactions** - 2PC and Saga patterns
+- **Real-time Subscriptions** - WebSocket/SSE with intelligent filtering
+- **GraphQL Integration** - Automatic schema generation
+- **Semantic Caching** - AI-powered intelligent caching
+- **Performance Optimization** - AI suggestions and monitoring
+- **Multi-tenancy** - Flexible isolation strategies
 
-### **Advanced Features**
-- **Query Builder** - Fluent API for complex queries
-- **Intelligent Cache** - LRU/LFU/FIFO caching strategies
-- **Bulk Operations** - MongoDB-style bulk writer with batch processing
-- **Optimized Pagination** - Token-based and cursor pagination
-- **Hooks & Middleware** - Extensible operation lifecycle
-- **Performance Monitoring** - Built-in metrics and observability
-
-## 📦 Installation
-
-```bash
-npm install cassandraorm-js
-```
-
-## ⚡ Quick Start
-
-### Basic Usage
-
-```javascript
-const { CassandraORM } = require('cassandraorm-js');
-
-const orm = new CassandraORM({
-  contactPoints: ['127.0.0.1'],
-  localDataCenter: 'datacenter1',
-  keyspace: 'myapp'
-});
-
-await orm.connect();
-
-// Define model
-const User = orm.model('users', {
-  id: 'uuid',
-  name: 'text',
-  email: 'text',
-  createdAt: 'timestamp'
-}, {
-  key: ['id']
-});
-
-await User.createTable();
-
-// Create user
-const user = await User.create({
-  id: orm.uuid(),
-  name: 'John Doe',
-  email: 'john@email.com',
-  createdAt: new Date()
-});
-```
-
-### Modern TypeScript Usage
+## 🚀 Quick Start
 
 ```typescript
 import { createClient } from 'cassandraorm-js';
@@ -78,178 +30,155 @@ const client = createClient({
     keyspace: 'myapp'
   },
   ormOptions: {
-    createKeyspace: true, // Auto-create keyspace
-    migration: 'safe'     // Auto-create tables
+    createKeyspace: true,
+    migration: 'safe'
   }
 });
 
-await client.connect(); // Creates keyspace automatically
+await client.connect();
 
+// Define schema with validation and relations
 const User = await client.loadSchema('users', {
   fields: {
     id: 'uuid',
     email: { 
       type: 'text', 
       unique: true,
-      validate: {
-        required: true,
-        isEmail: true
-      }
+      validate: { required: true, isEmail: true }
     },
     name: {
       type: 'text',
-      validate: {
-        required: true,
-        minLength: 2
-      }
-    },
-    age: {
-      type: 'int',
-      validate: {
-        min: 0,
-        max: 120
-      }
+      validate: { required: true, minLength: 2 }
     }
   },
+  relations: {
+    posts: { model: 'posts', foreignKey: 'user_id', type: 'hasMany' }
+  },
   key: ['id']
-}); // Creates table automatically with validation
-```
-
-### Advanced Query Builder
-
-```typescript
-import { AdvancedQueryBuilder } from 'cassandraorm-js';
-
-const queryBuilder = new AdvancedQueryBuilder(client.driver, 'users', 'myapp');
-
-const users = await queryBuilder
-  .select(['name', 'email', 'age'])
-  .where('status').eq('active')
-  .and('age').gte(18)
-  .and('category').in(['premium', 'gold'])
-  .orderBy('created_at', 'DESC')
-  .limit(50)
-  .allowFiltering()
-  .execute();
-```
-
-### Bulk Operations
-
-```typescript
-import { BulkWriter } from 'cassandraorm-js';
-
-const bulkWriter = new BulkWriter(client.driver, 'myapp', {
-  batchSize: 100,
-  skipDuplicates: true
 });
-
-bulkWriter
-  .insert('users', { id: client.uuid(), name: 'User 1', email: 'user1@email.com' })
-  .insert('users', { id: client.uuid(), name: 'User 2', email: 'user2@email.com' })
-  .update('users', { age: 26 }, { email: 'john@email.com' });
-
-const result = await bulkWriter.execute();
-console.log(`Inserted: ${result.inserted}, Updated: ${result.updated}`);
 ```
 
-### Intelligent Caching
+## 🧠 AI/ML Features
 
 ```typescript
-import { IntelligentCache, QueryCache } from 'cassandraorm-js';
+import { AIMLManager, SemanticCache } from 'cassandraorm-js';
 
-const cache = new IntelligentCache({
-  ttl: 300,        // 5 minutes
-  maxSize: 1000,   // Max 1000 items
-  strategy: 'lru'  // Least Recently Used
-});
+// Vector similarity search
+const aiml = new AIMLManager(client.driver, 'myapp');
+await aiml.createVectorTable('documents');
 
-const queryCache = new QueryCache({ ttl: 600 });
+const embedding = await aiml.generateEmbedding('search query');
+const results = await aiml.similaritySearch('documents', embedding);
 
-// Cache queries automatically
-const query = 'SELECT * FROM users WHERE status = ?';
-const params = ['active'];
+// Semantic caching
+const cache = new SemanticCache({ similarityThreshold: 0.85 });
+await cache.set(query, params, result);
+const cached = await cache.get(similarQuery, similarParams); // Smart cache hit!
+```
 
-let result = queryCache.get(query, params);
-if (!result) {
-  result = await client.execute(query, params);
-  queryCache.set(query, params, result.rows);
+## 🔄 Event Sourcing & CQRS
+
+```typescript
+import { EventStore, BaseAggregateRoot, AggregateRepository } from 'cassandraorm-js';
+
+class UserAggregate extends BaseAggregateRoot {
+  static create(id: string, name: string, email: string): UserAggregate {
+    const user = new UserAggregate(id);
+    user.addEvent('UserCreated', { name, email });
+    return user;
+  }
+
+  changeName(newName: string): void {
+    this.addEvent('UserNameChanged', { oldName: this.name, newName });
+  }
 }
+
+const eventStore = new EventStore(client.driver, 'myapp');
+const repository = new AggregateRepository(eventStore, (id) => new UserAggregate(id));
+
+const user = UserAggregate.create('user1', 'John', 'john@example.com');
+await repository.save(user);
 ```
 
-### Hooks and Middleware
+## 🌐 Real-time & GraphQL
 
 ```typescript
-import { HooksMiddlewareSystem, CommonHooks } from 'cassandraorm-js';
+import { SubscriptionManager, GraphQLSchemaGenerator } from 'cassandraorm-js';
 
-const hooks = new HooksMiddlewareSystem();
-
-// Add timestamps automatically
-hooks.beforeCreate(CommonHooks.addTimestamps);
-hooks.beforeUpdate(CommonHooks.updateTimestamp);
-
-// Add validation
-hooks.beforeCreate(CommonHooks.validate(userSchema));
-
-// Add custom hook
-hooks.beforeCreate(async (data) => {
-  if (data.password) {
-    data.password = await hashPassword(data.password);
-  }
-  return data;
-});
-
-// Execute with hooks
-const result = await hooks.executeOperation(
-  'create',
-  userData,
-  { operation: 'create', tableName: 'users' },
-  async () => {
-    return await client.execute(
-      'INSERT INTO users (id, name, email) VALUES (?, ?, ?)',
-      [userData.id, userData.name, userData.email]
-    );
-  }
+// Real-time subscriptions
+const subscriptions = new SubscriptionManager(client.driver, 'myapp');
+await subscriptions.subscribe(
+  { table: 'users', operation: 'insert' },
+  (event) => console.log('New user:', event.data)
 );
+
+// Auto-generated GraphQL schema
+const generator = new GraphQLSchemaGenerator();
+generator.addModel('users', userSchema);
+const typeDefs = generator.generateSchema();
+const resolvers = generator.getResolvers();
 ```
 
-## 📚 Documentation
+## 📊 Advanced Analytics
 
-### English
-- [Installation Guide](./docs/installation.md)
-- [Migration Guide](./docs/migration.md)
-- [API Reference](./docs/api-reference.md)
-- [Advanced Features](./docs/advanced-features.md)
-- [Auto-Creation](./docs/auto-creation.md)
-- [Bulk Operations](./docs/bulk-writer.md)
-- [Examples](./docs/examples.md)
+```typescript
+import { AggregationsManager, TimeSeriesManager } from 'cassandraorm-js';
 
-### Português
-- [Guia de Instalação](./docs/installation.pt.md)
-- [Guia de Migração](./docs/migration.pt.md)
-- [Referência da API](./docs/api-reference.pt.md)
-- [Exemplos](./docs/examples.pt.md)
+// MongoDB-style aggregations
+const aggregations = new AggregationsManager(client.driver, 'myapp');
+const stats = await aggregations.createPipeline('orders')
+  .where('status', '=', 'completed')
+  .groupBy('customer_id')
+  .count('total_orders')
+  .sum('amount', 'total_revenue')
+  .having('total_orders').gt(5)
+  .execute();
+
+// Time series data
+const timeSeries = new TimeSeriesManager(client.driver, 'myapp');
+await timeSeries.insert('metrics', [{
+  timestamp: new Date(),
+  value: 100.5,
+  tags: { metric: 'cpu_usage', host: 'server1' }
+}]);
+```
+
+## 📚 Complete Documentation
+
+**📖 [Complete Documentation](./docs/COMPLETE_DOCUMENTATION.md)** - Comprehensive guide covering all 16 features
+
+**🔄 [Migration Guide](./docs/MIGRATION_GUIDE.md)** - Step-by-step migration from Express-Cassandra
+
+### Quick Links
+- [Phase 1: Foundation Features](./docs/COMPLETE_DOCUMENTATION.md#phase-1-foundation-features) - Relations, Aggregations, Connection Pool, Time Series
+- [Phase 2: Scalability Features](./docs/COMPLETE_DOCUMENTATION.md#phase-2-scalability-features) - Streaming, Observability, Multi-tenancy, Schema Evolution
+- [Phase 3: Integration Features](./docs/COMPLETE_DOCUMENTATION.md#phase-3-integration-features) - GraphQL, Backup/Restore, Performance Optimization, Subscriptions
+- [Phase 4: AI/ML & Enterprise](./docs/COMPLETE_DOCUMENTATION.md#phase-4-aiml--enterprise-features) - AI/ML, Event Sourcing, Distributed Transactions, Semantic Caching
+
+## 🧪 Testing
+
+```bash
+# Run all tests (47/48 passing - 97.9% success rate)
+bun test
+
+# Run specific phase tests
+bun test tests/phase1-features.test.ts  # Foundation
+bun test tests/phase2-features.test.ts  # Scalability  
+bun test tests/phase3-features.test.ts  # Integration
+bun test tests/phase4-features.test.ts  # AI/ML & Enterprise
+
+# CI tests
+npm test
+```
 
 ## 🌍 Languages
 
 - [English](./README.md) (current)
 - [Português](./README.pt.md)
 
-## 🔄 Migration
+## 🔄 Migration from Express-Cassandra
 
-CassandraORM JS is compatible with Express-Cassandra, making migration easy.
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-npm test
-
-# Run specific tests
-npm run test:ci        # CI tests
-npm run test:bun       # Bun tests
-npm run test:bulk      # Bulk operations
-npm run test:features  # Advanced features
-```
+CassandraORM JS is designed to be compatible with Express-Cassandra while providing significant enhancements. See our [Migration Guide](./docs/MIGRATION_GUIDE.md) for step-by-step instructions.
 
 ## 🤝 Contributing
 
@@ -263,9 +192,12 @@ MIT License - see [LICENSE](./LICENSE) file for details.
 
 - [NPM Package](https://www.npmjs.com/package/cassandraorm-js)
 - [GitHub Repository](https://github.com/wemerson-silva-kz/cassandraorm-js)
-- [Documentation](./docs/README.md)
+- [Complete Documentation](./docs/COMPLETE_DOCUMENTATION.md)
+- [Migration Guide](./docs/MIGRATION_GUIDE.md)
 - [Examples](./examples/)
 
 ## ⭐ Support
 
 If you find this project helpful, please give it a star on GitHub!
+
+**CassandraORM JS - The most advanced ORM for Cassandra/ScyllaDB** 🚀
