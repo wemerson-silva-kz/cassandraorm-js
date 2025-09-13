@@ -1,23 +1,37 @@
 {
   "name": "cassandraorm-js",
   "version": "2.0.0",
-  "description": "Modern ORM for Apache Cassandra and ScyllaDB with advanced features: Connection Pooling, Query Builder, Migrations, Monitoring, and Plugin System",
+  "description": "The most advanced ORM for Apache Cassandra and ScyllaDB with native TypeScript support, AI/ML integration, and enterprise-grade features",
   "main": "src/index.ts",
-  "types": "src/types.ts",
+  "types": "src/core/types.ts",
   "keywords": [
-    "cassandra", 
-    "orm", 
-    "scylladb", 
-    "database", 
-    "nosql", 
+    "cassandra",
+    "scylladb",
+    "orm",
     "typescript",
+    "ai",
+    "ml",
+    "vector-search",
+    "event-sourcing",
+    "graphql",
+    "real-time",
+    "enterprise",
+    "nosql",
+    "database",
+    "distributed-transactions",
+    "semantic-caching",
+    "time-series",
     "query-builder",
     "migrations",
     "monitoring",
     "plugins",
     "connection-pooling"
   ],
-  "author": "Wemerson Silva <wemerson.silva.kz@gmail.com>",
+  "author": {
+    "name": "Wemerson Silva",
+    "email": "wemerson.silva.kz@gmail.com",
+    "url": "https://github.com/wemerson-silva-kz"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -29,12 +43,18 @@
   "homepage": "https://github.com/wemerson-silva-kz/cassandraorm-js#readme",
   "scripts": {
     "test": "node test-ci-simple.js",
+    "test:full": "bun test",
     "test:integration": "bun run tests/integration.test.ts",
     "test:ci": "node test-ci-simple.js",
     "build": "bun build src/index.ts --outdir dist --target node",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
+    "build:full": "npm run clean && npm run build && npm run build:types",
     "lint": "eslint src/**/*.ts",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build && npm test"
+    "prepublishOnly": "npm run clean && npm run build && npm test",
+    "release": "npm version patch && npm publish && git push --tags",
+    "release:minor": "npm version minor && npm publish && git push --tags",
+    "release:major": "npm version major && npm publish && git push --tags"
   },
   "dependencies": {
     "cassandra-driver": "^4.7.2"
@@ -42,18 +62,22 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0",
-    "eslint": "^8.0.0"
+    "eslint": "^8.0.0",
+    "bun-types": "latest"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "files": [
-    "index.js",
-    "index.d.ts",
     "src/",
+    "dist/",
     "README.md",
     "README.pt.md",
     "LICENSE",
     "docs/"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
 }

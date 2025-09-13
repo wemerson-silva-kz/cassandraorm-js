@@ -1,0 +1,119 @@
+{
+  "CassandraORM Client": {
+    "prefix": "cassandra-client",
+    "body": [
+      "import { createClient } from 'cassandraorm-js';",
+      "",
+      "const client = createClient({",
+      "  clientOptions: {",
+      "    contactPoints: ['${1:127.0.0.1}'],",
+      "    localDataCenter: '${2:datacenter1}',",
+      "    keyspace: '${3:myapp}'",
+      "  },",
+      "  ormOptions: {",
+      "    createKeyspace: true,",
+      "    migration: 'safe'",
+      "  }",
+      "});",
+      "",
+      "await client.connect();"
+    ],
+    "description": "Create CassandraORM client"
+  },
+  
+  "Model Schema": {
+    "prefix": "cassandra-model",
+    "body": [
+      "const ${1:User} = await client.loadSchema('${2:users}', {",
+      "  fields: {",
+      "    id: 'uuid',",
+      "    ${3:name}: {",
+      "      type: '${4:text}',",
+      "      validate: {",
+      "        required: true",
+      "      }",
+      "    }",
+      "  },",
+      "  key: ['id']",
+      "});"
+    ],
+    "description": "Create model schema"
+  },
+  
+  "AI/ML Integration": {
+    "prefix": "cassandra-aiml",
+    "body": [
+      "import { AIMLManager } from 'cassandraorm-js';",
+      "",
+      "const aiml = new AIMLManager(client.driver, '${1:keyspace}');",
+      "await aiml.createVectorTable('${2:documents}');",
+      "",
+      "const embedding = await aiml.generateEmbedding('${3:search query}');",
+      "const results = await aiml.similaritySearch('${2:documents}', embedding);"
+    ],
+    "description": "AI/ML vector search setup"
+  },
+  
+  "Event Sourcing": {
+    "prefix": "cassandra-events",
+    "body": [
+      "import { EventStore, BaseAggregateRoot } from 'cassandraorm-js';",
+      "",
+      "class ${1:User}Aggregate extends BaseAggregateRoot {",
+      "  static create(id: string, ${2:name}: string): ${1:User}Aggregate {",
+      "    const ${3:user} = new ${1:User}Aggregate(id);",
+      "    ${3:user}.addEvent('${1:User}Created', { ${2:name} });",
+      "    return ${3:user};",
+      "  }",
+      "}"
+    ],
+    "description": "Event sourcing aggregate"
+  },
+  
+  "GraphQL Integration": {
+    "prefix": "cassandra-graphql",
+    "body": [
+      "import { GraphQLSchemaGenerator } from 'cassandraorm-js';",
+      "",
+      "const generator = new GraphQLSchemaGenerator();",
+      "generator.addModel('${1:users}', ${2:userSchema});",
+      "",
+      "const typeDefs = generator.generateSchema();",
+      "const resolvers = generator.getResolvers();"
+    ],
+    "description": "GraphQL schema generation"
+  },
+  
+  "Real-time Subscriptions": {
+    "prefix": "cassandra-subscriptions",
+    "body": [
+      "import { SubscriptionManager } from 'cassandraorm-js';",
+      "",
+      "const subscriptions = new SubscriptionManager(client.driver, '${1:keyspace}');",
+      "",
+      "await subscriptions.subscribe(",
+      "  { table: '${2:users}', operation: '${3:insert}' },",
+      "  (event) => {",
+      "    console.log('${4:New user}:', event.data);",
+      "  }",
+      ");"
+    ],
+    "description": "Real-time subscriptions"
+  },
+  
+  "Semantic Caching": {
+    "prefix": "cassandra-cache",
+    "body": [
+      "import { SemanticCache } from 'cassandraorm-js';",
+      "",
+      "const cache = new SemanticCache({",
+      "  similarityThreshold: ${1:0.85},",
+      "  maxCacheSize: ${2:1000}",
+      "});",
+      "",
+      "await cache.set(query, params, result);",
+      "const cached = await cache.get(similarQuery, similarParams);"
+    ],
+    "description": "Semantic caching setup"
+  }
+}
