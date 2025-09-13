@@ -29,18 +29,12 @@
   "homepage": "https://github.com/wemerson-silva-kz/cassandraorm-js#readme",
   "scripts": {
     "test": "node test-ci-simple.js",
-    "test:bun": "bun test test/*.test.ts",
-    "test:bulk": "bun run test-bulk-writer.ts",
-    "test:ci": "bun run test-ci.ts",
-    "test:ci:node": "node test-ci-simple.js",
-    "test:features": "bun run test-features-simple.ts",
-    "test:auto": "bun run test-auto-create.ts",
-    "test-connection": "bun run test-connection.ts",
-    "test-orm": "bun run test-orm.ts",
-    "test-advanced": "bun test test/advanced.test.ts",
-    "lint": "eslint src/**/*.ts",
+    "test:integration": "bun run tests/integration.test.ts",
+    "test:ci": "node test-ci-simple.js",
     "build": "bun build src/index.ts --outdir dist --target node",
-    "prepublishOnly": "npm run test"
+    "lint": "eslint src/**/*.ts",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build && npm test"
   },
   "dependencies": {
     "cassandra-driver": "^4.7.2"
