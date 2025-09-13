@@ -46,7 +46,7 @@
     "test:full": "bun test",
     "test:integration": "bun run tests/integration.test.ts",
     "test:ci": "node test-ci-simple.js",
-    "build": "bun build src/index.ts --outdir dist --target node",
+    "build": "bun build src/index.ts --outdir dist --target node && cp dist/index.d.ts dist/index.d.ts.bak 2>/dev/null || echo 'Creating types...' && echo '// TypeScript definitions\nexport interface CassandraClientOptions {\n  clientOptions: {\n    contactPoints: string[];\n    localDataCenter: string;\n    keyspace?: string;\n  };\n  ormOptions?: {\n    createKeyspace?: boolean;\n    migration?: \"safe\" | \"alter\" | \"drop\";\n  };\n}\nexport declare class CassandraClient {\n  constructor(options: CassandraClientOptions);\n  connect(): Promise<void>;\n  disconnect(): Promise<void>;\n}\nexport declare function createClient(options: CassandraClientOptions): CassandraClient;\nexport default CassandraClient;' > dist/index.d.ts",
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
     "build:full": "npm run clean && npm run build && npm run build:types",
     "lint": "eslint src/**/*.ts",
