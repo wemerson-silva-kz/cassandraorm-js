@@ -1,32 +1,37 @@
 const cassandra = require('cassandra-driver');
+const { ConnectionPool } = require('./src/connection-pool');
+const { QueryBuilder } = require('./src/query-builder');
+const { MigrationManager } = require('./src/migrations');
+const { Monitor } = require('./src/monitoring');
+const { PluginManager, CachePlugin, ValidationPlugin } = require('./src/plugin-system');
 
 class CassandraORM {
-  constructor(options) {
+  constructor(options = {}) {
     this.options = options;
-    this.client = new cassandra.Client({
-      contactPoints: options.contactPoints || ['localhost'],
-      localDataCenter: options.localDataCenter || 'datacenter1',
-      authProvider: options.authProvider,
-      sslOptions: options.sslOptions
-    });
     this.keyspace = options.keyspace;
     this.models = new Map();
+    
+    // Initialize advanced features
+    this.connectionPool = new ConnectionPool(options);
+    this.monitor = new Monitor(options.monitoring);
+    this.pluginManager = new PluginManager();
+    this.migrationManager = null;
+    
+    // Setup client reference for backward compatibility
+    this.client = null;
   }
 
   async connect() {
-    await this.client.connect();
-    if (this.keyspace) {
-      await this.createKeyspace();
-      await this.client.shutdown();
-      this.client = new cassandra.Client({
-        contactPoints: this.options.contactPoints || ['localhost'],
-        localDataCenter: this.options.localDataCenter || 'datacenter1',
-        keyspace: this.keyspace,
-        authProvider: this.options.authProvider,
-        sslOptions: this.options.sslOptions
-      });
-      await this.client.connect();
-    }
+    this.client = await this.connectionPool.getConnection(this.keyspace);
+    this.monitor.recordConnection('connect');
+    
+    // Initialize migration manager
+    this.migrationManager = new MigrationManager(this.client, this.options.migrationsPath);
+    
+    // Execute hooks
+    await this.pluginManager.executeHook('afterConnect', { client: this.client });
+    
+    this.monitor.log('info', 'Connected to Cassandra', { keyspace: this.keyspace });
   }
 
   async createKeyspace() {
@@ -39,9 +44,23 @@ class CassandraORM {
       CREATE KEYSPACE IF NOT EXISTS ${this.keyspace}
       WITH REPLICATION = ${JSON.stringify(replication).replace(/"/g, "'")}
     `;
-    await this.client.execute(query);
+    
+    const queryContext = this.monitor.startQuery(query);
+    try {
+      await this.client.execute(query);
+      this.monitor.endQuery(queryContext);
+    } catch (error) {
+      this.monitor.endQuery(queryContext, error);
+      throw error;
+    }
   }
 
+  // Query Builder
+  query(tableName) {
+    return new QueryBuilder(this.client, tableName);
+  }
+
+  // UUID utilities
   uuid() {
     return cassandra.types.Uuid.random();
   }
@@ -50,32 +69,97 @@ class CassandraORM {
     return cassandra.types.TimeUuid.now();
   }
 
+  // Model management
   model(name, schema, options = {}) {
     if (this.models.has(name)) {
       return this.models.get(name);
     }
     
-    const model = new Model(this.client, name, schema, options);
+    const model = new Model(this.client, name, schema, options, this);
     this.models.set(name, model);
     return model;
   }
 
-  async shutdown() {
-    await this.client.shutdown();
+  // Migration methods
+  async migrate() {
+    if (!this.migrationManager) {
+      throw new Error('Not connected. Call connect() first.');
+    }
+    return this.migrationManager.migrate();
+  }
+
+  async createMigration(name) {
+    if (!this.migrationManager) {
+      throw new Error('Not connected. Call connect() first.');
+    }
+    return this.migrationManager.createMigration(name);
+  }
+
+  async rollback(steps = 1) {
+    if (!this.migrationManager) {
+      throw new Error('Not connected. Call connect() first.');
+    }
+    return this.migrationManager.rollback(steps);
+  }
+
+  // Plugin methods
+  use(plugin, options = {}) {
+    if (typeof plugin === 'string') {
+      // Built-in plugins
+      switch (plugin) {
+        case 'cache':
+          this.pluginManager.register('cache', new CachePlugin(options));
+          break;
+        case 'validation':
+          this.pluginManager.register('validation', new ValidationPlugin(options));
+          break;
+        default:
+          throw new Error(`Unknown built-in plugin: ${plugin}`);
+      }
+    } else {
+      // Custom plugin
+      const name = options.name || plugin.name || 'anonymous';
+      this.pluginManager.register(name, plugin);
+    }
+    return this;
+  }
+
+  // Monitoring
+  getMetrics() {
+    return {
+      ...this.monitor.getMetrics(),
+      connectionPool: this.connectionPool.getPoolStats()
+    };
+  }
+
+  getHealthCheck() {
+    return this.monitor.getHealthCheck();
   }
 
   // Batch operations
   batch() {
-    return new BatchQuery(this.client);
+    return new BatchQuery(this.client, this.monitor, this.pluginManager);
+  }
+
+  async shutdown() {
+    this.monitor.recordConnection('disconnect');
+    await this.connectionPool.closeAll();
+    await this.pluginManager.executeHook('beforeDisconnect');
   }
 }
 
 class Model {
-  constructor(client, name, schema, options) {
+  constructor(client, name, schema, options, orm) {
     this.client = client;
     this.name = name;
     this.schema = schema;
     this.options = options;
+    this.orm = orm;
+  }
+
+  // Query builder for this model
+  query() {
+    return new QueryBuilder(this.client, this.name);
   }
 
   async createTable() {
@@ -92,20 +176,42 @@ class Model {
       )
     `;
     
-    await this.client.execute(query);
+    const queryContext = this.orm.monitor.startQuery(query);
+    try {
+      await this.client.execute(query);
+      this.orm.monitor.endQuery(queryContext);
+    } catch (error) {
+      this.orm.monitor.endQuery(queryContext, error);
+      throw error;
+    }
   }
 
   async create(data) {
-    const fields = Object.keys(data).join(', ');
-    const placeholders = Object.keys(data).map(() => '?').join(', ');
-    const values = Object.values(data);
+    // Execute hooks
+    const context = await this.orm.pluginManager.executeHook('beforeInsert', {
+      data, schema: this.schema, model: this.name
+    });
+
+    const fields = Object.keys(context.data).join(', ');
+    const placeholders = Object.keys(context.data).map(() => '?').join(', ');
+    const values = Object.values(context.data);
 
     const query = `INSERT INTO ${this.name} (${fields}) VALUES (${placeholders})`;
-    await this.client.execute(query, values, { prepare: true });
-    return data;
+    
+    const queryContext = this.orm.monitor.startQuery(query, values);
+    try {
+      await this.client.execute(query, values, { prepare: true });
+      this.orm.monitor.endQuery(queryContext);
+      
+      await this.orm.pluginManager.executeHook('afterInsert', { data: context.data, model: this.name });
+      return context.data;
+    } catch (error) {
+      this.orm.monitor.endQuery(queryContext, error);
+      throw error;
+    }
   }
 
-  async find(where = {}) {
+  async find(where = {}, options = {}) {
     let query = `SELECT * FROM ${this.name}`;
     const values = [];
 
@@ -120,45 +226,72 @@ class Model {
       query += ` WHERE ${conditions}`;
     }
 
-    const result = await this.client.execute(query, values, { prepare: true });
-    return result.rows;
+    if (options.limit) {
+      query += ` LIMIT ${options.limit}`;
+    }
+
+    const queryContext = this.orm.monitor.startQuery(query, values);
+    try {
+      const result = await this.client.execute(query, values, { prepare: true });
+      this.orm.monitor.endQuery(queryContext);
+      return result.rows;
+    } catch (error) {
+      this.orm.monitor.endQuery(queryContext, error);
+      throw error;
+    }
   }
 
-  async findOne(where = {}) {
-    const results = await this.find(where);
+  async findOne(where = {}, options = {}) {
+    const results = await this.find(where, { ...options, limit: 1 });
     return results[0] || null;
   }
 
   async update(where, data) {
-    const setClause = Object.keys(data)
-      .map(key => `${key} = ?`)
-      .join(', ');
-    
-    const whereClause = Object.keys(where)
-      .map(key => `${key} = ?`)
-      .join(' AND ');
+    const context = await this.orm.pluginManager.executeHook('beforeUpdate', {
+      data, where, schema: this.schema, model: this.name
+    });
 
-    const values = [...Object.values(data), ...Object.values(where)];
+    const setClause = Object.keys(context.data).map(key => `${key} = ?`).join(', ');
+    const whereClause = Object.keys(where).map(key => `${key} = ?`).join(' AND ');
+    const values = [...Object.values(context.data), ...Object.values(where)];
+    
     const query = `UPDATE ${this.name} SET ${setClause} WHERE ${whereClause}`;
     
-    await this.client.execute(query, values, { prepare: true });
+    const queryContext = this.orm.monitor.startQuery(query, values);
+    try {
+      await this.client.execute(query, values, { prepare: true });
+      this.orm.monitor.endQuery(queryContext);
+      
+      await this.orm.pluginManager.executeHook('afterUpdate', { data: context.data, where, model: this.name });
+    } catch (error) {
+      this.orm.monitor.endQuery(queryContext, error);
+      throw error;
+    }
   }
 
   async delete(where) {
-    const whereClause = Object.keys(where)
-      .map(key => `${key} = ?`)
-      .join(' AND ');
-
+    const whereClause = Object.keys(where).map(key => `${key} = ?`).join(' AND ');
     const values = Object.values(where);
     const query = `DELETE FROM ${this.name} WHERE ${whereClause}`;
     
-    await this.client.execute(query, values, { prepare: true });
+    const queryContext = this.orm.monitor.startQuery(query, values);
+    try {
+      await this.client.execute(query, values, { prepare: true });
+      this.orm.monitor.endQuery(queryContext);
+      
+      await this.orm.pluginManager.executeHook('afterDelete', { where, model: this.name });
+    } catch (error) {
+      this.orm.monitor.endQuery(queryContext, error);
+      throw error;
+    }
   }
 }
 
 class BatchQuery {
-  constructor(client) {
+  constructor(client, monitor, pluginManager) {
     this.client = client;
+    this.monitor = monitor;
+    this.pluginManager = pluginManager;
     this.queries = [];
   }
 
@@ -198,9 +331,28 @@ class BatchQuery {
   }
 
   async execute() {
-    await this.client.batch(this.queries, { prepare: true });
-    this.queries = [];
+    const queryContext = this.monitor.startQuery('BATCH', this.queries);
+    try {
+      await this.client.batch(this.queries, { prepare: true });
+      this.monitor.endQuery(queryContext);
+      this.queries = [];
+      
+      await this.pluginManager.executeHook('afterBatch', { queries: this.queries });
+    } catch (error) {
+      this.monitor.endQuery(queryContext, error);
+      throw error;
+    }
   }
 }
 
-module.exports = { CassandraORM, Model, BatchQuery };
+module.exports = { 
+  CassandraORM, 
+  Model, 
+  BatchQuery,
+  QueryBuilder,
+  MigrationManager,
+  Monitor,
+  PluginManager,
+  CachePlugin,
+  ValidationPlugin
+};

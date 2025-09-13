@@ -1,10 +1,22 @@
 {
   "name": "cassandraorm-js",
-  "version": "1.1.0",
-  "description": "Modern ORM for Apache Cassandra and ScyllaDB with TypeScript support",
+  "version": "2.0.0",
+  "description": "Modern ORM for Apache Cassandra and ScyllaDB with advanced features: Connection Pooling, Query Builder, Migrations, Monitoring, and Plugin System",
   "main": "index.js",
   "types": "index.d.ts",
-  "keywords": ["cassandra", "orm", "scylladb", "database", "nosql", "typescript"],
+  "keywords": [
+    "cassandra", 
+    "orm", 
+    "scylladb", 
+    "database", 
+    "nosql", 
+    "typescript",
+    "query-builder",
+    "migrations",
+    "monitoring",
+    "plugins",
+    "connection-pooling"
+  ],
   "author": "Wemerson Silva <wemerson.silva.kz@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -19,6 +31,7 @@
     "test": "bun test test/*.test.js",
     "test-connection": "bun run test-connection.js",
     "test-orm": "bun run test-orm.js",
+    "test-advanced": "bun test test/advanced.test.js",
     "lint": "bun run eslint .",
     "prepublishOnly": "bun test"
   },
@@ -36,6 +49,7 @@
   "files": [
     "index.js",
     "index.d.ts",
+    "src/",
     "README.md",
     "README.pt.md",
     "LICENSE",
