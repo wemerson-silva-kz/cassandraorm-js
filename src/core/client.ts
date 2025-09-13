@@ -510,17 +510,78 @@ export class CassandraClient {
   }
 
   private async processUniqueFields(tableName: string, schema: ModelSchema): Promise<void> {
-    const uniqueFields: string[] = [];
-    
-    for (const [fieldName, fieldDef] of Object.entries(schema.fields)) {
-      if (typeof fieldDef === 'object' && fieldDef.unique) {
-        uniqueFields.push(fieldName);
+    // Não criar tabelas auxiliares - validação será feita no ORM
+    if (schema.unique && schema.unique.length > 0) {
+      console.log(`✅ Schema ${tableName} configurado com campos únicos: ${schema.unique.join(', ')}`);
+    }
+  }
+
+  async validateUniqueFields(tableName: string, data: Record<string, any>, schema: ModelSchema, excludeId?: string): Promise<void> {
+    if (!schema.unique || schema.unique.length === 0) {
+      return;
+    }
+
+    const violations: string[] = [];
+
+    for (const field of schema.unique) {
+      if (data[field] !== undefined && data[field] !== null) {
+        try {
+          // Buscar todos os registros com esse valor
+          const query = `SELECT id FROM ${tableName} WHERE ${field} = ? ALLOW FILTERING`;
+          const params = [data[field]];
+
+          const result = await this.client.execute(query, params);
+          
+          // Se encontrou registros, verificar se não é o próprio registro (para UPDATE)
+          if (result.rows.length > 0) {
+            if (excludeId) {
+              // Para UPDATE - verificar se algum dos IDs encontrados é diferente do excludeId
+              const otherRecords = result.rows.filter(row => row.id.toString() !== excludeId);
+              if (otherRecords.length > 0) {
+                violations.push(`Field '${field}' with value '${data[field]}' already exists`);
+              }
+            } else {
+              // Para INSERT - qualquer registro encontrado é violação
+              violations.push(`Field '${field}' with value '${data[field]}' already exists`);
+            }
+          }
+        } catch (error) {
+          // Se der erro na query, continuar (pode ser que a tabela não exista ainda)
+          console.warn(`Warning: Could not validate unique field ${field}:`, error);
+        }
       }
     }
-    
-    if (uniqueFields.length > 0 && this.uniqueManager) {
-      await this.uniqueManager.createUniqueTable(tableName, uniqueFields);
+
+    if (violations.length > 0) {
+      throw new Error(`Unique constraint violation: ${violations.join(', ')}`);
     }
+  }
+
+  async insertWithUniqueValidation(tableName: string, data: Record<string, any>, schema: ModelSchema): Promise<void> {
+    // Validar campos únicos antes de inserir
+    await this.validateUniqueFields(tableName, data, schema);
+
+    // Construir query de inserção
+    const fields = Object.keys(data);
+    const placeholders = fields.map(() => '?').join(', ');
+    const values = Object.values(data);
+
+    const query = `INSERT INTO ${tableName} (${fields.join(', ')}) VALUES (${placeholders})`;
+    
+    await this.client.execute(query, values);
+  }
+
+  async updateWithUniqueValidation(tableName: string, id: string, data: Record<string, any>, schema: ModelSchema): Promise<void> {
+    // Validar campos únicos antes de atualizar (excluindo o próprio registro)
+    await this.validateUniqueFields(tableName, data, schema, id);
+
+    // Construir query de atualização
+    const updates = Object.keys(data).map(field => `${field} = ?`);
+    const values = [...Object.values(data), id];
+
+    const query = `UPDATE ${tableName} SET ${updates.join(', ')} WHERE id = ?`;
+    
+    await this.client.execute(query, values);
   }
 
   private createModelClass<T extends Record<string, any>>(

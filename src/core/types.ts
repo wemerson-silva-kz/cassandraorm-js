@@ -195,6 +195,7 @@ export interface UDADefinition {
 export interface ModelSchema {
   fields: Record<string, FieldDefinition | string>;
   key: Array<string | string[]>;
+  unique?: string[]; // Campos únicos adicionais
   clustering_order?: Record<string, 'asc' | 'desc'>;
   indexes?: string[];
   custom_indexes?: Array<{
