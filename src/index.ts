@@ -113,6 +113,38 @@ export {
   type MigrationRecord
 } from './validation/evolution.js';
 
+// New Advanced Features - Phase 3
+export { 
+  GraphQLSchemaGenerator,
+  CassandraDataSource,
+  type GraphQLConfig,
+  type GraphQLField,
+  type GraphQLType
+} from './integrations/graphql.js';
+
+export { 
+  BackupManager,
+  type BackupConfig,
+  type BackupMetadata,
+  type RestoreOptions
+} from './utils/backup.js';
+
+export { 
+  PerformanceOptimizer,
+  type OptimizationConfig,
+  type QueryAnalysis,
+  type OptimizationSuggestion,
+  type PerformanceMetrics
+} from './utils/optimization.js';
+
+export { 
+  SubscriptionManager,
+  type SubscriptionConfig,
+  type SubscriptionFilter,
+  type SubscriptionEvent,
+  type Subscription
+} from './integrations/subscriptions.js';
+
 export type {
   BaseModelInstance,
   BatchQuery,
