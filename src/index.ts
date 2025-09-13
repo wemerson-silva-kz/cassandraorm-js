@@ -16,7 +16,7 @@ export { StreamingQuery, createModelStream } from './utils/streaming.js';
 export { UniqueConstraintManager, type UniqueConstraintOptions } from './unique-constraints.js';
 export { BulkWriter, type BulkWriterOptions, type BulkOperation, type BulkResult } from './bulk-writer.js';
 
-// Advanced Features - High Priority
+// Advanced Features - High Priority (Existing)
 export { AdvancedQueryBuilder, WhereClause, type WhereCondition, type QueryBuilderOptions } from './advanced-query-builder.js';
 export { SchemaValidator, type ValidationRule, type ValidationError } from './schema-validator.js';
 export { IntelligentCache, QueryCache, type CacheOptions, type CacheEntry } from './intelligent-cache.js';
@@ -38,6 +38,39 @@ export {
   type MiddlewareFunction,
   type HookContext
 } from './hooks-middleware.js';
+
+// New Advanced Features - Phase 1
+export { 
+  RelationsManager,
+  type RelationDefinition,
+  type RelationsConfig,
+  type PopulateOptions
+} from './query/relations.js';
+
+export { 
+  AggregationsManager,
+  AggregationBuilder,
+  HavingClause,
+  type AggregationPipeline,
+  type AggregationOperation,
+  type AggregationResult,
+  type AggregationsConfig
+} from './query/aggregations.js';
+
+export { 
+  AdvancedConnectionPool,
+  type AdvancedPoolOptions,
+  type ConnectionStats,
+  type ConnectionInfo
+} from './connection/advanced-pool.js';
+
+export { 
+  TimeSeriesManager,
+  type TimeSeriesOptions,
+  type TimeSeriesPoint,
+  type TimeSeriesQuery,
+  type TimeSeriesResult
+} from './data/time-series.js';
 
 export type {
   BaseModelInstance,
