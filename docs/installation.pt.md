@@ -1,18 +1,18 @@
-# Installation - CassandraORM JS
+# Instalação - CassandraORM JS
 
-## Prerequisites
+## Pré-requisitos
 
 - Node.js >= 16.0.0
-- TypeScript >= 4.5.0 (optional)
-- Cassandra >= 3.11 or ScyllaDB >= 4.0
+- TypeScript >= 4.5.0 (opcional)
+- Cassandra >= 3.11 ou ScyllaDB >= 4.0
 
-## Installation
+## Instalação
 
 ```bash
 npm install cassandraorm-js
 ```
 
-## Basic Configuration
+## Configuração Básica
 
 ```typescript
 import { CassandraORM } from 'cassandraorm-js';
@@ -26,7 +26,7 @@ const orm = new CassandraORM({
 await orm.connect();
 ```
 
-## Environment Variables
+## Variáveis de Ambiente
 
 ```env
 CASSANDRA_HOSTS=localhost
@@ -34,18 +34,18 @@ CASSANDRA_KEYSPACE=myapp
 CASSANDRA_DATACENTER=datacenter1
 ```
 
-## Verification
+## Verificação
 
 ```typescript
 try {
   await orm.connect();
-  console.log('✅ Connected to Cassandra');
+  console.log('✅ Conectado ao Cassandra');
 } catch (error) {
-  console.error('❌ Connection error:', error);
+  console.error('❌ Erro na conexão:', error);
 }
 ```
 
-## 🌍 Languages
+## 🌍 Idiomas
 
-- [English](installation.md) (current)
-- [Português](installation.pt.md)
+- [English](installation.md)
+- [Português](installation.pt.md) (atual)

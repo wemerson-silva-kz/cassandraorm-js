@@ -3,17 +3,17 @@
 [![npm version](https://badge.fury.io/js/cassandraorm-js.svg)](https://www.npmjs.com/package/cassandraorm-js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Um ORM moderno e otimizado para Apache Cassandra e ScyllaDB com suporte nativo para TypeScript, ES6+ e recursos avançados.
+A modern and optimized ORM for Apache Cassandra and ScyllaDB with native TypeScript support, ES6+ features and advanced capabilities.
 
-## 🚀 Características
+## 🚀 Features
 
-- **TypeScript First** - Suporte nativo com tipos completos
-- **ES6+ Modules** - Import/export moderno
-- **Async/Await** - API totalmente baseada em Promises
-- **Performance** - Otimizações para alta performance
-- **Developer Experience** - Melhor DX com IntelliSense completo
+- **TypeScript First** - Native support with complete types
+- **ES6+ Modules** - Modern import/export syntax
+- **Async/Await** - Promise-based API throughout
+- **Performance** - Optimized for high performance
+- **Developer Experience** - Enhanced DX with full IntelliSense
 
-## 📦 Instalação
+## 📦 Installation
 
 ```bash
 npm install cassandraorm-js
@@ -32,7 +32,7 @@ const orm = new CassandraORM({
 
 await orm.connect();
 
-// Definir modelo
+// Define model
 const User = orm.model('users', {
   id: 'uuid',
   name: 'text',
@@ -44,26 +44,36 @@ const User = orm.model('users', {
 
 await User.createTable();
 
-// Criar usuário
+// Create user
 const user = await User.create({
   id: orm.uuid(),
-  name: 'João Silva',
-  email: 'joao@email.com',
+  name: 'John Doe',
+  email: 'john@email.com',
   createdAt: new Date()
 });
 
-// Buscar usuários
+// Find users
 const users = await User.find();
 ```
 
-## 📚 Documentação
+## 📚 Documentation
 
-Veja a [documentação completa](./docs/README.md) para mais detalhes.
+See the [complete documentation](./docs/README.md) for more details.
 
-## 🔄 Migração
+- [Installation Guide](./docs/installation.md)
+- [Migration Guide](./docs/migration.md)
+- [API Reference](./docs/api-reference.md)
+- [Examples](./docs/examples.md)
 
-CassandraORM JS é compatível com Express-Cassandra, facilitando a migração.
+## 🌍 Languages
 
-## 📄 Licença
+- [English](./README.md) (current)
+- [Português](./README.pt.md)
+
+## 🔄 Migration
+
+CassandraORM JS is compatible with Express-Cassandra, making migration easy.
+
+## 📄 License
 
 MIT

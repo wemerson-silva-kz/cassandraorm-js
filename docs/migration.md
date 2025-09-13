@@ -1,8 +1,8 @@
-# Guia de Migração para CassandraORM JS
+# Migration Guide to CassandraORM JS
 
-## Do Express-Cassandra para CassandraORM JS
+## From Express-Cassandra to CassandraORM JS
 
-### Antes (Express-Cassandra)
+### Before (Express-Cassandra)
 
 ```javascript
 const models = require('express-cassandra');
@@ -15,15 +15,15 @@ models.setDirectory(__dirname + '/models').bind({
 });
 
 const user = new models.instance.User({
-  name: 'João'
+  name: 'John'
 });
 
 user.saveAsync().then(() => {
-  console.log('Salvo');
+  console.log('Saved');
 });
 ```
 
-### Depois (CassandraORM JS)
+### After (CassandraORM JS)
 
 ```typescript
 import { CassandraORM } from 'cassandraorm-js';
@@ -38,19 +38,24 @@ const User = orm.model('User', {
 });
 
 const user = await User.create({
-  name: 'João'
+  name: 'John'
 });
 ```
 
-## Principais Mudanças
+## Key Changes
 
-- ✅ ES6 Modules em vez de CommonJS
-- ✅ TypeScript nativo
-- ✅ API mais limpa e consistente
-- ✅ Async/await por padrão
-- ✅ Melhor performance
-- ✅ IntelliSense completo
+- ✅ ES6 Modules instead of CommonJS
+- ✅ Native TypeScript support
+- ✅ Cleaner and more consistent API
+- ✅ Async/await by default
+- ✅ Better performance
+- ✅ Full IntelliSense support
 
-## Compatibilidade
+## Compatibility
 
-CassandraORM JS mantém compatibilidade com os conceitos principais do Express-Cassandra, facilitando a migração gradual.
+CassandraORM JS maintains compatibility with the core concepts of Express-Cassandra, making gradual migration easy.
+
+## 🌍 Languages
+
+- [English](migration.md) (current)
+- [Português](migration.pt.md)

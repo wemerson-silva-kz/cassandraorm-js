@@ -1,16 +1,16 @@
-# CassandraORM JS
+# CassandraORM JS Documentation
 
-Um ORM moderno e otimizado para Apache Cassandra e ScyllaDB com suporte nativo para TypeScript, ES6+ e recursos avançados.
+A modern and optimized ORM for Apache Cassandra and ScyllaDB with native TypeScript support, ES6+ features and advanced capabilities.
 
-## 🚀 Características
+## 🚀 Features
 
-- **TypeScript First** - Suporte nativo com tipos completos
-- **ES6+ Modules** - Import/export moderno
-- **Async/Await** - API totalmente baseada em Promises
-- **Performance** - Otimizações para alta performance
-- **Developer Experience** - Melhor DX com IntelliSense completo
+- **TypeScript First** - Native support with complete types
+- **ES6+ Modules** - Modern import/export syntax
+- **Async/Await** - Promise-based API throughout
+- **Performance** - Optimized for high performance
+- **Developer Experience** - Enhanced DX with full IntelliSense
 
-## 📦 Instalação
+## 📦 Installation
 
 ```bash
 npm install cassandraorm-js
@@ -27,7 +27,7 @@ const orm = new CassandraORM({
   keyspace: 'myapp'
 });
 
-// Definir modelo
+// Define model
 const User = orm.model('User', {
   id: 'uuid',
   name: 'text',
@@ -38,26 +38,47 @@ const User = orm.model('User', {
   indexes: ['email']
 });
 
-// Usar o modelo
+// Use the model
 const user = await User.create({
   id: orm.uuid(),
-  name: 'João Silva',
-  email: 'joao@email.com',
+  name: 'John Doe',
+  email: 'john@email.com',
   createdAt: new Date()
 });
 ```
 
-## 📚 Documentação
+## 📚 Documentation Structure
 
-- [Instalação](installation.md)
-- [Guia de Migração](migration.md)
-- [API Reference](api-reference.md)
-- [Exemplos](examples.md)
+- [Installation Guide](installation.md) - How to install and configure
+- [Migration Guide](migration.md) - Migrate from Express-Cassandra
+- [API Reference](api-reference.md) - Complete API documentation
+- [Examples](examples.md) - Practical examples
 
-## 🔄 Migração do Express-Cassandra
+## Features
 
-CassandraORM JS mantém compatibilidade com a API original, mas oferece melhorias significativas em performance e developer experience.
+✅ Support for Cassandra 4.x, 3.x and ScyllaDB 5.x  
+✅ Complete CRUD operations  
+✅ Data type validation  
+✅ Support for collections and advanced types  
+✅ Materialized views and indexes  
+✅ Complex queries with pagination  
+✅ User-defined types/functions/aggregates  
+✅ Atomic batch operations  
+✅ Save/update/delete hooks  
+✅ Full Promise support  
+✅ Automatic migrations (experimental)  
+✅ Data import/export (experimental)  
 
-## 📄 Licença
+## 🌍 Languages
 
-MIT
+- [English](README.md) (current)
+- [Português](README.pt.md)
+
+## Support
+
+- [GitHub Issues](https://github.com/wemerson-silva-kz/cassandraorm-js/issues)
+- [NPM Package](https://www.npmjs.com/package/cassandraorm-js)
+
+## License
+
+MIT License

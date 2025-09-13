@@ -1,4 +1,4 @@
-# API Reference - CassandraORM JS
+# Referência da API - CassandraORM JS
 
 ## CassandraORM
 
@@ -8,57 +8,57 @@
 new CassandraORM(options: ConnectionOptions)
 ```
 
-### Methods
+### Métodos
 
 #### `connect(): Promise<void>`
-Connects to the Cassandra cluster.
+Conecta ao cluster Cassandra.
 
 #### `model(name: string, schema: Schema, options?: ModelOptions): Model`
-Defines a new model.
+Define um novo modelo.
 
 #### `uuid(): string`
-Generates a UUID v4.
+Gera um UUID v4.
 
 #### `batch(): BatchQuery`
-Creates a batch operation.
+Cria uma operação em lote.
 
 ## Model
 
-### Static Methods
+### Métodos Estáticos
 
 #### `create(data: object): Promise<ModelInstance>`
-Creates a new instance.
+Cria uma nova instância.
 
 #### `find(query: object): Promise<ModelInstance[]>`
-Finds records.
+Busca registros.
 
 #### `findOne(query: object): Promise<ModelInstance | null>`
-Finds a single record.
+Busca um registro.
 
 #### `update(query: object, data: object): Promise<void>`
-Updates records.
+Atualiza registros.
 
 #### `delete(query: object): Promise<void>`
-Deletes records.
+Remove registros.
 
-### Instance Methods
+### Métodos de Instância
 
 #### `save(): Promise<void>`
-Saves the instance.
+Salva a instância.
 
 #### `remove(): Promise<void>`
-Removes the instance.
+Remove a instância.
 
-## Query Operators
+## Operadores de Query
 
-- `$eq` - Equal
-- `$gt` - Greater than
-- `$gte` - Greater than or equal
-- `$lt` - Less than
-- `$lte` - Less than or equal
-- `$in` - In array
+- `$eq` - Igual
+- `$gt` - Maior que
+- `$gte` - Maior ou igual
+- `$lt` - Menor que
+- `$lte` - Menor ou igual
+- `$in` - Está em array
 
-## 🌍 Languages
+## 🌍 Idiomas
 
-- [English](api-reference.md) (current)
-- [Português](api-reference.pt.md)
+- [English](api-reference.md)
+- [Português](api-reference.pt.md) (atual)

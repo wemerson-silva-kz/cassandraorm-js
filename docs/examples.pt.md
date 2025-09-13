@@ -1,6 +1,6 @@
-# Examples - CassandraORM JS
+# Exemplos - CassandraORM JS
 
-## Initial Setup
+## Configuração Inicial
 
 ```typescript
 import { CassandraORM } from 'cassandraorm-js';
@@ -14,7 +14,7 @@ const orm = new CassandraORM({
 await orm.connect();
 ```
 
-## Basic Model
+## Modelo Básico
 
 ```typescript
 const User = orm.model('users', {
@@ -29,30 +29,30 @@ const User = orm.model('users', {
 });
 ```
 
-## CRUD Operations
+## Operações CRUD
 
 ```typescript
-// Create
+// Criar
 const user = await User.create({
   id: orm.uuid(),
-  name: 'John Doe',
-  email: 'john@email.com',
+  name: 'João Silva',
+  email: 'joao@email.com',
   age: 30,
   createdAt: new Date()
 });
 
-// Read
+// Buscar
 const users = await User.find({ age: { $gte: 18 } });
-const user = await User.findOne({ email: 'john@email.com' });
+const user = await User.findOne({ email: 'joao@email.com' });
 
-// Update
-await User.update({ email: 'john@email.com' }, { age: 31 });
+// Atualizar
+await User.update({ email: 'joao@email.com' }, { age: 31 });
 
-// Delete
-await User.delete({ email: 'john@email.com' });
+// Deletar
+await User.delete({ email: 'joao@email.com' });
 ```
 
-## Relationships
+## Relacionamentos
 
 ```typescript
 const Post = orm.model('posts', {
@@ -65,23 +65,23 @@ const Post = orm.model('posts', {
   indexes: ['userId']
 });
 
-// Find user posts
+// Buscar posts do usuário
 const userPosts = await Post.find({ userId: user.id });
 ```
 
-## Batch Operations
+## Operações em Lote
 
 ```typescript
 const batch = orm.batch();
 
-batch.insert(User, { name: 'User 1' });
-batch.insert(User, { name: 'User 2' });
-batch.update(User, { id: userId }, { name: 'Updated' });
+batch.insert(User, { name: 'Usuário 1' });
+batch.insert(User, { name: 'Usuário 2' });
+batch.update(User, { id: userId }, { name: 'Atualizado' });
 
 await batch.execute();
 ```
 
-## 🌍 Languages
+## 🌍 Idiomas
 
-- [English](examples.md) (current)
-- [Português](examples.pt.md)
+- [English](examples.md)
+- [Português](examples.pt.md) (atual)
