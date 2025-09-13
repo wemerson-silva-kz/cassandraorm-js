@@ -145,6 +145,47 @@ export {
   type Subscription
 } from './integrations/subscriptions.js';
 
+// New Advanced Features - Phase 4
+export { 
+  AIMLManager,
+  type AIConfig,
+  type EmbeddingVector,
+  type SimilarityResult,
+  type QuerySuggestion
+} from './integrations/ai-ml.js';
+
+export { 
+  EventStore,
+  BaseAggregateRoot,
+  AggregateRepository,
+  Saga,
+  UserAggregate,
+  type EventSourcingConfig,
+  type DomainEvent,
+  type Snapshot,
+  type AggregateRoot,
+  type SagaStep
+} from './integrations/event-sourcing.js';
+
+export { 
+  DistributedTransactionManager,
+  CassandraParticipant,
+  TwoPhaseCommitCoordinator,
+  SagaCoordinator,
+  TransactionStatus,
+  type TransactionConfig,
+  type TransactionContext,
+  type TransactionParticipant,
+  type TransactionOperation
+} from './integrations/distributed-transactions.js';
+
+export { 
+  SemanticCache,
+  type SemanticCacheConfig,
+  type CacheEntry as SemanticCacheEntry,
+  type CacheStats as SemanticCacheStats
+} from './cache/semantic-cache.js';
+
 export type {
   BaseModelInstance,
   BatchQuery,
