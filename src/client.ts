@@ -20,6 +20,7 @@ import { DataImporter, type ImportOptions } from './utils/importer.js';
 import { ElassandraClient, type ElasticsearchConfig, type SearchQuery } from './elassandra/client.js';
 import { ModelLoader } from './utils/model-loader.js';
 import { StreamingQuery, createModelStream } from './utils/streaming.js';
+import { UniqueConstraintManager } from './unique-constraints.js';
 
 export abstract class BaseModel implements BaseModelInstance {
   _modified: Record<string, boolean> = {};
@@ -42,6 +43,7 @@ export class CassandraClient {
   private importer?: DataImporter;
   private elassandraClient?: ElassandraClient;
   private streaming?: StreamingQuery;
+  private uniqueManager?: UniqueConstraintManager;
 
   constructor(private options: CassandraClientOptions) {
     this.client = new Client(options.clientOptions);
@@ -49,18 +51,59 @@ export class CassandraClient {
   }
 
   async connect(): Promise<void> {
+    // Connect without keyspace first
+    const clientWithoutKeyspace = new Client({
+      ...this.options.clientOptions,
+      keyspace: undefined
+    });
+    
+    await clientWithoutKeyspace.connect();
+    
+    // Create keyspace if it doesn't exist and auto-creation is enabled
+    if (this.keyspace && this.options.ormOptions?.createKeyspace) {
+      await this.createKeyspaceIfNotExists(clientWithoutKeyspace);
+    }
+    
+    await clientWithoutKeyspace.shutdown();
+    
+    // Now connect with keyspace
     await this.client.connect();
     
     if (this.keyspace) {
       this.exporter = new DataExporter(this.client, this.keyspace);
       this.importer = new DataImporter(this.client, this.keyspace);
+      this.uniqueManager = new UniqueConstraintManager(this.client, this.keyspace);
     }
     
     this.streaming = new StreamingQuery(this.client, this.keyspace);
   }
 
+  private async createKeyspaceIfNotExists(client: Client): Promise<void> {
+    const replication = this.options.ormOptions?.defaultReplicationStrategy || {
+      class: 'SimpleStrategy',
+      replication_factor: 1
+    };
+    
+    const query = `
+      CREATE KEYSPACE IF NOT EXISTS ${this.keyspace}
+      WITH REPLICATION = ${JSON.stringify(replication).replace(/"/g, "'")}
+    `;
+    
+    await client.execute(query);
+  }
+
   async disconnect(): Promise<void> {
     await this.client.shutdown();
+  }
+
+  // Direct execute method for convenience
+  async execute(query: string, params?: any[], options?: any): Promise<any> {
+    return this.client.execute(query, params, options);
+  }
+
+  // Getter for driver access
+  get driver(): Client {
+    return this.client;
   }
 
   // Elassandra support
@@ -260,13 +303,63 @@ export class CassandraClient {
     return result.rows.map((row) => row.table_name);
   }
 
-  loadSchema<T extends Record<string, any>>(
+  async loadSchema<T extends Record<string, any>>(
     name: string,
     schema: ModelSchema,
-  ): ModelStatic<T> {
+  ): Promise<ModelStatic<T>> {
+    // Create table automatically if enabled
+    if (this.options.ormOptions?.migration === 'safe' || this.options.ormOptions?.migration === 'alter') {
+      await this.createTableFromSchema(name, schema);
+    }
+    
+    // Process unique fields
+    await this.processUniqueFields(name, schema);
+    
     const ModelClass = this.createModelClass<T>(name, schema);
     this.models.set(name, ModelClass);
     return ModelClass;
+  }
+
+  private async createTableFromSchema(tableName: string, schema: ModelSchema): Promise<void> {
+    const fields: string[] = [];
+    
+    // Process fields
+    for (const [fieldName, fieldDef] of Object.entries(schema.fields)) {
+      const fieldType = typeof fieldDef === 'string' ? fieldDef : fieldDef.type;
+      fields.push(`${fieldName} ${fieldType}`);
+    }
+    
+    // Process primary key
+    const primaryKey = Array.isArray(schema.key[0]) 
+      ? `(${schema.key[0].join(', ')})${schema.key.slice(1).length > 0 ? ', ' + schema.key.slice(1).join(', ') : ''}`
+      : schema.key.join(', ');
+    
+    const query = `
+      CREATE TABLE IF NOT EXISTS ${this.keyspace}.${tableName} (
+        ${fields.join(',\n        ')},
+        PRIMARY KEY (${primaryKey})
+      )
+    `;
+    
+    try {
+      await this.client.execute(query);
+    } catch (error) {
+      console.warn(`Warning: Could not create table ${tableName}:`, error);
+    }
+  }
+
+  private async processUniqueFields(tableName: string, schema: ModelSchema): Promise<void> {
+    const uniqueFields: string[] = [];
+    
+    for (const [fieldName, fieldDef] of Object.entries(schema.fields)) {
+      if (typeof fieldDef === 'object' && fieldDef.unique) {
+        uniqueFields.push(fieldName);
+      }
+    }
+    
+    if (uniqueFields.length > 0 && this.uniqueManager) {
+      await this.uniqueManager.createUniqueTable(tableName, uniqueFields);
+    }
   }
 
   private createModelClass<T extends Record<string, any>>(

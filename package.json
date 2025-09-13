@@ -2,8 +2,8 @@
   "name": "cassandraorm-js",
   "version": "2.0.0",
   "description": "Modern ORM for Apache Cassandra and ScyllaDB with advanced features: Connection Pooling, Query Builder, Migrations, Monitoring, and Plugin System",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "src/index.ts",
+  "types": "src/types.ts",
   "keywords": [
     "cassandra", 
     "orm", 
@@ -28,15 +28,16 @@
   },
   "homepage": "https://github.com/wemerson-silva-kz/cassandraorm-js#readme",
   "scripts": {
-    "test": "node test-ci.js",
-    "test:bun": "bun test test/*.test.js",
-    "test:node": "node test-basic-node.js",
-    "test:ci": "node test-ci.js",
-    "test-connection": "node test-connection.js",
-    "test-orm": "node test-orm.js",
-    "test-advanced": "bun test test/advanced.test.js",
-    "lint": "eslint .",
-    "prepublishOnly": "npm run test:node"
+    "test": "bun test test/*.test.ts",
+    "test:bun": "bun test test/*.test.ts",
+    "test:bulk": "bun run test-bulk-writer.ts",
+    "test:ci": "bun run test-ci.ts",
+    "test-connection": "bun run test-connection.ts",
+    "test-orm": "bun run test-orm.ts",
+    "test-advanced": "bun test test/advanced.test.ts",
+    "lint": "eslint src/**/*.ts",
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "prepublishOnly": "bun run test"
   },
   "dependencies": {
     "cassandra-driver": "^4.7.2"

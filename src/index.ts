@@ -2,11 +2,19 @@ import { CassandraClient } from "./client.js";
 import type { CassandraClientOptions } from "./types.js";
 
 export { BaseModel, CassandraClient } from "./client.js";
+export { CassandraORM, Model } from "./orm.js";
+export { ConnectionPool } from "./connection-pool.js";
+export { QueryBuilder } from "./query-builder.js";
+export { MigrationManager } from "./migrations.js";
+export { Monitor } from "./monitoring.js";
+export { PluginManager, CachePlugin, ValidationPlugin } from "./plugin-system.js";
 export { DataExporter } from './utils/exporter.js';
 export { DataImporter, type ImportOptions } from './utils/importer.js';
 export { ElassandraClient, type ElasticsearchConfig, type SearchQuery } from './elassandra/client.js';
 export { ModelLoader } from './utils/model-loader.js';
 export { StreamingQuery, createModelStream } from './utils/streaming.js';
+export { UniqueConstraintManager, type UniqueConstraintOptions } from './unique-constraints.js';
+export { BulkWriter, type BulkWriterOptions, type BulkOperation, type BulkResult } from './bulk-writer.js';
 export type {
   BaseModelInstance,
   BatchQuery,

@@ -12,6 +12,8 @@ A modern and optimized ORM for Apache Cassandra and ScyllaDB with native TypeScr
 - **Async/Await** - Promise-based API throughout
 - **Performance** - Optimized for high performance
 - **Developer Experience** - Enhanced DX with full IntelliSense
+- **Bulk Operations** - MongoDB-style bulk writer with batch processing
+- **Unique Constraints** - Prevent duplicate data insertion
 
 ## 📦 Installation
 
@@ -54,6 +56,43 @@ const user = await User.create({
 
 // Find users
 const users = await User.find();
+
+// Auto-creation example (TypeScript)
+import { createClient } from 'cassandraorm-js';
+
+const client = createClient({
+  clientOptions: {
+    contactPoints: ['127.0.0.1'],
+    localDataCenter: 'datacenter1',
+    keyspace: 'myapp'
+  },
+  ormOptions: {
+    createKeyspace: true, // Auto-create keyspace
+    migration: 'safe'     // Auto-create tables
+  }
+});
+
+await client.connect(); // Creates keyspace automatically
+
+const User = await client.loadSchema('users', {
+  fields: {
+    id: 'uuid',
+    email: { type: 'text', unique: true },
+    name: 'text'
+  },
+  key: ['id']
+}); // Creates table automatically
+
+// Bulk operations (MongoDB-style)
+const bulkWriter = orm.bulkWriter({ batchSize: 100 });
+
+bulkWriter
+  .insert('users', { id: orm.uuid(), name: 'User 1', email: 'user1@email.com' })
+  .insert('users', { id: orm.uuid(), name: 'User 2', email: 'user2@email.com' })
+  .update('users', { age: 26 }, { email: 'john@email.com' });
+
+const result = await bulkWriter.execute();
+console.log(`Inserted: ${result.inserted}, Updated: ${result.updated}`);
 ```
 
 ## 📚 Documentation

@@ -119,6 +119,7 @@ export interface FieldDefinition {
   type: keyof CassandraDataTypes | string;
   typeDef?: string;
   default?: CassandraValue | { $db_function: string } | (() => CassandraValue);
+  unique?: boolean;
   rule?: 
     | ((value: CassandraValue) => boolean) 
     | { 
