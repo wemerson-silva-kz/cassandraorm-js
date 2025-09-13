@@ -2,7 +2,7 @@
   "name": "cassandraorm-js",
   "version": "2.0.1",
   "description": "The most advanced ORM for Apache Cassandra and ScyllaDB with native TypeScript support, AI/ML integration, and enterprise-grade features",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "types": "src/core/types.ts",
   "keywords": [
     "cassandra",
