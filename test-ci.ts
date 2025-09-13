@@ -1,4 +1,4 @@
-const { CassandraORM } = require('./index');
+import { CassandraORM } from './src/orm.js';
 
 async function testCI() {
   console.log('🔄 Running CI tests...');
@@ -16,7 +16,7 @@ async function testCI() {
     console.log('✅ Connected to Cassandra');
 
     // Test 3: Create keyspace
-    await orm.client.execute(`
+    await orm.client!.execute(`
       CREATE KEYSPACE IF NOT EXISTS test_ci
       WITH REPLICATION = {
         'class': 'SimpleStrategy',
@@ -26,11 +26,11 @@ async function testCI() {
     console.log('✅ Keyspace created');
 
     // Test 4: Use keyspace
-    await orm.client.execute('USE test_ci');
+    await orm.client!.execute('USE test_ci');
     console.log('✅ Using keyspace');
 
     // Test 5: Create table
-    await orm.client.execute(`
+    await orm.client!.execute(`
       CREATE TABLE IF NOT EXISTS test_table (
         id uuid PRIMARY KEY,
         name text
@@ -40,7 +40,7 @@ async function testCI() {
 
     // Test 6: Insert data
     const uuid = orm.uuid();
-    await orm.client.execute(
+    await orm.client!.execute(
       'INSERT INTO test_table (id, name) VALUES (?, ?)',
       [uuid, 'CI Test'],
       { prepare: true }
@@ -48,7 +48,7 @@ async function testCI() {
     console.log('✅ Data inserted');
 
     // Test 7: Query data
-    const result = await orm.client.execute('SELECT * FROM test_table');
+    const result = await orm.client!.execute('SELECT * FROM test_table');
     console.log(`✅ Found ${result.rows.length} rows`);
 
     // Cleanup
@@ -58,7 +58,7 @@ async function testCI() {
     console.log('\n🎉 CI tests passed!');
     process.exit(0);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ CI test failed:', error.message);
     console.error('Stack:', error.stack);
     process.exit(1);

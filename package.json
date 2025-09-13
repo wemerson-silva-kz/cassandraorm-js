@@ -28,10 +28,12 @@
   },
   "homepage": "https://github.com/wemerson-silva-kz/cassandraorm-js#readme",
   "scripts": {
-    "test": "bun test test/*.test.ts",
+    "test": "bun run test-ci.ts",
     "test:bun": "bun test test/*.test.ts",
     "test:bulk": "bun run test-bulk-writer.ts",
     "test:ci": "bun run test-ci.ts",
+    "test:features": "bun run test-features-simple.ts",
+    "test:auto": "bun run test-auto-create.ts",
     "test-connection": "bun run test-connection.ts",
     "test-orm": "bun run test-orm.ts",
     "test-advanced": "bun test test/advanced.test.ts",
