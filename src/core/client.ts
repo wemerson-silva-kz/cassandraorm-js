@@ -96,9 +96,169 @@ export class CassandraClient {
     await this.client.shutdown();
   }
 
+  async createKeyspaceIfNotExists(keyspaceName: string, options: any = {}): Promise<void> {
+    const replicationStrategy = options.replication || this.options.ormOptions?.defaultReplicationStrategy || {
+      class: 'SimpleStrategy',
+      replication_factor: 1
+    };
+
+    const query = `
+      CREATE KEYSPACE IF NOT EXISTS ${keyspaceName}
+      WITH REPLICATION = ${JSON.stringify(replicationStrategy).replace(/"/g, "'")}
+    `;
+    
+    await this.execute(query);
+  }
+
+  async dropKeyspaceIfExists(keyspaceName: string): Promise<void> {
+    const query = `DROP KEYSPACE IF EXISTS ${keyspaceName}`;
+    await this.execute(query);
+  }
+
   // Direct execute method for convenience
   async execute(query: string, params?: any[], options?: any): Promise<any> {
     return this.client.execute(query, params, options);
+  }
+
+  async executeAsPrepared(query: string, params?: any[], options?: any): Promise<any> {
+    const preparedOptions = { ...options, prepare: true };
+    return this.client.execute(query, params, preparedOptions);
+  }
+
+  async batch(queries: any[], options?: any): Promise<any> {
+    return this.client.batch(queries, options);
+  }
+
+  async shutdown(): Promise<void> {
+    return this.client.shutdown();
+  }
+
+  async save(modelInstance: any, options?: any): Promise<any> {
+    // Implementation for saving model instances
+    if (modelInstance && typeof modelInstance.save === 'function') {
+      return modelInstance.save(options);
+    }
+    throw new Error('Invalid model instance');
+  }
+
+  async find(query: any, options?: any): Promise<any[]> {
+    // Implementation for finding records
+    const cql = this.buildSelectQuery(query, options);
+    const result = await this.execute(cql.query, cql.params, options);
+    return result.rows || [];
+  }
+
+  async findOne(query: any, options?: any): Promise<any> {
+    const findOptions = { ...options, limit: 1 };
+    const results = await this.find(query, findOptions);
+    return results.length > 0 ? results[0] : null;
+  }
+
+  async update(query: any, updateValues: any, options?: any): Promise<any> {
+    const cql = this.buildUpdateQuery(query, updateValues, options);
+    return this.execute(cql.query, cql.params, options);
+  }
+
+  async delete(query: any, options?: any): Promise<any> {
+    const cql = this.buildDeleteQuery(query, options);
+    return this.execute(cql.query, cql.params, options);
+  }
+
+  stream(query: any, options?: any): any {
+    const cql = this.buildSelectQuery(query, options);
+    return this.client.stream(cql.query, cql.params, options);
+  }
+
+  now(): Date {
+    return new Date();
+  }
+
+  uuid(): string {
+    return CassandraClient.uuid();
+  }
+
+  timeuuid(): string {
+    return CassandraClient.timeuuid();
+  }
+
+  private buildSelectQuery(query: any, options?: any): { query: string; params: any[] } {
+    // Simple query builder implementation
+    let cql = 'SELECT ';
+    const params: any[] = [];
+    
+    if (options?.select) {
+      cql += options.select.join(', ');
+    } else {
+      cql += '*';
+    }
+    
+    cql += ' FROM ' + (options?.table || 'table');
+    
+    if (query && Object.keys(query).length > 0) {
+      cql += ' WHERE ';
+      const conditions: string[] = [];
+      
+      Object.entries(query).forEach(([key, value]) => {
+        if (!key.startsWith('$')) {
+          conditions.push(`${key} = ?`);
+          params.push(value);
+        }
+      });
+      
+      cql += conditions.join(' AND ');
+    }
+    
+    if (query?.$limit) {
+      cql += ` LIMIT ${query.$limit}`;
+    }
+    
+    return { query: cql, params };
+  }
+
+  private buildUpdateQuery(query: any, updateValues: any, options?: any): { query: string; params: any[] } {
+    let cql = 'UPDATE ' + (options?.table || 'table') + ' SET ';
+    const params: any[] = [];
+    
+    const updates: string[] = [];
+    Object.entries(updateValues).forEach(([key, value]) => {
+      updates.push(`${key} = ?`);
+      params.push(value);
+    });
+    
+    cql += updates.join(', ');
+    
+    if (query && Object.keys(query).length > 0) {
+      cql += ' WHERE ';
+      const conditions: string[] = [];
+      
+      Object.entries(query).forEach(([key, value]) => {
+        conditions.push(`${key} = ?`);
+        params.push(value);
+      });
+      
+      cql += conditions.join(' AND ');
+    }
+    
+    return { query: cql, params };
+  }
+
+  private buildDeleteQuery(query: any, options?: any): { query: string; params: any[] } {
+    let cql = 'DELETE FROM ' + (options?.table || 'table');
+    const params: any[] = [];
+    
+    if (query && Object.keys(query).length > 0) {
+      cql += ' WHERE ';
+      const conditions: string[] = [];
+      
+      Object.entries(query).forEach(([key, value]) => {
+        conditions.push(`${key} = ?`);
+        params.push(value);
+      });
+      
+      cql += conditions.join(' AND ');
+    }
+    
+    return { query: cql, params };
   }
 
   // Getter for driver access
@@ -176,8 +336,8 @@ export class CassandraClient {
   }
 
   // UUID utilities (static methods from original)
-  static uuid(): types.Uuid {
-    return types.Uuid.random();
+  static uuid(): string {
+    return types.Uuid.random().toString();
   }
 
   static uuidFromString(str: string): types.Uuid {
@@ -188,8 +348,8 @@ export class CassandraClient {
     return new types.Uuid(buf);
   }
 
-  static timeuuid(): types.TimeUuid {
-    return types.TimeUuid.now();
+  static timeuuid(): string {
+    return types.TimeUuid.now().toString();
   }
 
   static timeuuidFromDate(date: Date): types.TimeUuid {
