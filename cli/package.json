@@ -1,0 +1,31 @@
+{
+  "name": "cassandraorm-cli",
+  "version": "2.0.0",
+  "description": "CLI tool for CassandraORM JS - Generate models, run migrations, and manage projects",
+  "main": "dist/index.js",
+  "bin": {
+    "cassandraorm": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cassandra",
+    "orm",
+    "cli",
+    "generator",
+    "migrations"
+  ],
+  "author": "Wemerson Silva <wemerson.silva.kz@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^10.0.0",
+    "cassandraorm-js": "^2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
