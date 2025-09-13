@@ -200,7 +200,7 @@ export class CommonHooks {
   static validate(schema: any) {
     return async (data: any): Promise<any> => {
       // Import validation logic here
-      const { SchemaValidator } = await import('./schema-validator.js');
+      const { SchemaValidator } = await import('../validation/schema-validator.js');
       const errors = SchemaValidator.validate(data, schema);
       
       if (errors.length > 0) {
