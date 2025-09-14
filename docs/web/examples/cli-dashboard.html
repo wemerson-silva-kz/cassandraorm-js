@@ -456,7 +456,7 @@ cassandraorm test:load --concurrent 100 --duration 30s</code></pre>
 
             <div class="example-section">
                 <h2>📱 Frontend Dashboard (React)</h2>
-                <pre><code class="language-javascript">// Dashboard React component
+                <pre><code class="language-jsx">// Dashboard React component
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -507,76 +507,76 @@ const CassandraDashboard = () => {
   };
 
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <h1>CassandraORM Dashboard</h1>
-        <div className="status-indicators">
-          <div className="status-item">
-            <span className="label">Active Connections:</span>
-            <span className="value">{metrics['cassandra.connections.active'] || 0}</span>
-          </div>
-          <div className="status-item">
-            <span className="label">Queries/sec:</span>
-            <span className="value">{metrics['cassandra.queries.rate'] || 0}</span>
-          </div>
-          <div className="status-item">
-            <span className="label">Cache Hit Rate:</span>
-            <span className="value">{((metrics['cassandra.cache.hit_rate'] || 0) * 100).toFixed(1)}%</span>
-          </div>
-        </div>
-      </header>
+    &lt;div className="dashboard"&gt;
+      &lt;header className="dashboard-header"&gt;
+        &lt;h1&gt;CassandraORM Dashboard&lt;/h1&gt;
+        &lt;div className="status-indicators"&gt;
+          &lt;div className="status-item"&gt;
+            &lt;span className="label"&gt;Active Connections:&lt;/span&gt;
+            &lt;span className="value"&gt;{metrics['cassandra.connections.active'] || 0}&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div className="status-item"&gt;
+            &lt;span className="label"&gt;Queries/sec:&lt;/span&gt;
+            &lt;span className="value"&gt;{metrics['cassandra.queries.rate'] || 0}&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div className="status-item"&gt;
+            &lt;span className="label"&gt;Cache Hit Rate:&lt;/span&gt;
+            &lt;span className="value"&gt;{((metrics['cassandra.cache.hit_rate'] || 0) * 100).toFixed(1)}%&lt;/span&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/header&gt;
 
-      <div className="dashboard-grid">
+      &lt;div className="dashboard-grid"&gt;
         {/* Performance Chart */}
-        <div className="dashboard-card">
-          <h3>Query Performance</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={metrics.history || []}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="timestamp" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="avgResponseTime" stroke="#8884d8" />
-              <Line type="monotone" dataKey="queriesPerSecond" stroke="#82ca9d" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        &lt;div className="dashboard-card"&gt;
+          &lt;h3&gt;Query Performance&lt;/h3&gt;
+          &lt;ResponsiveContainer width="100%" height={300}&gt;
+            &lt;LineChart data={metrics.history || []}&gt;
+              &lt;CartesianGrid strokeDasharray="3 3" /&gt;
+              &lt;XAxis dataKey="timestamp" /&gt;
+              &lt;YAxis /&gt;
+              &lt;Tooltip /&gt;
+              &lt;Line type="monotone" dataKey="avgResponseTime" stroke="#8884d8" /&gt;
+              &lt;Line type="monotone" dataKey="queriesPerSecond" stroke="#82ca9d" /&gt;
+            &lt;/LineChart&gt;
+          &lt;/ResponsiveContainer&gt;
+        &lt;/div&gt;
 
         {/* Cluster Status */}
-        <div className="dashboard-card">
-          <h3>Cluster Status</h3>
-          <div className="cluster-nodes">
+        &lt;div className="dashboard-card"&gt;
+          &lt;h3&gt;Cluster Status&lt;/h3&gt;
+          &lt;div className="cluster-nodes"&gt;
             {(clusterStatus.hosts || []).map((host, index) => (
-              <div key={index} className={`node ${host.isUp ? 'up' : 'down'}`}>
-                <div className="node-address">{host.address}</div>
-                <div className="node-dc">{host.datacenter}</div>
-                <div className="node-status">{host.isUp ? 'UP' : 'DOWN'}</div>
-              </div>
+              &lt;div key={index} className={`node ${host.isUp ? 'up' : 'down'}`}&gt;
+                &lt;div className="node-address"&gt;{host.address}&lt;/div&gt;
+                &lt;div className="node-dc"&gt;{host.datacenter}&lt;/div&gt;
+                &lt;div className="node-status"&gt;{host.isUp ? 'UP' : 'DOWN'}&lt;/div&gt;
+              &lt;/div&gt;
             ))}
-          </div>
-        </div>
+          &lt;/div&gt;
+        &lt;/div&gt;
 
         {/* Recent Logs */}
-        <div className="dashboard-card">
-          <h3>Recent Logs</h3>
-          <div className="logs-container">
+        &lt;div className="dashboard-card"&gt;
+          &lt;h3&gt;Recent Logs&lt;/h3&gt;
+          &lt;div className="logs-container"&gt;
             {logs.slice(0, 20).map((log, index) => (
-              <div key={index} className={`log-entry ${log.level}`}>
-                <span className="log-timestamp">{log.timestamp}</span>
-                <span className="log-level">{log.level.toUpperCase()}</span>
-                <span className="log-message">{log.message}</span>
-              </div>
+              &lt;div key={index} className={`log-entry ${log.level}`}&gt;
+                &lt;span className="log-timestamp"&gt;{log.timestamp}&lt;/span&gt;
+                &lt;span className="log-level"&gt;{log.level.toUpperCase()}&lt;/span&gt;
+                &lt;span className="log-message"&gt;{log.message}&lt;/span&gt;
+              &lt;/div&gt;
             ))}
-          </div>
-        </div>
+          &lt;/div&gt;
+        &lt;/div&gt;
 
         {/* Query Executor */}
-        <div className="dashboard-card">
-          <h3>Query Executor</h3>
-          <QueryExecutor onExecute={executeQuery} />
-        </div>
-      </div>
-    </div>
+        &lt;div className="dashboard-card"&gt;
+          &lt;h3&gt;Query Executor&lt;/h3&gt;
+          &lt;QueryExecutor onExecute={executeQuery} /&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
   );
 };
 
@@ -597,30 +597,30 @@ const QueryExecutor = ({ onExecute }) => {
   };
 
   return (
-    <div className="query-executor">
-      <textarea
+    &lt;div className="query-executor"&gt;
+      &lt;textarea
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Enter CQL query..."
         rows={4}
-      />
-      <button onClick={handleExecute} disabled={loading}>
+      /&gt;
+      &lt;button onClick={handleExecute} disabled={loading}&gt;
         {loading ? 'Executing...' : 'Execute Query'}
-      </button>
+      &lt;/button&gt;
       
       {result && (
-        <div className="query-result">
+        &lt;div className="query-result"&gt;
           {result.error ? (
-            <div className="error">{result.error}</div>
+            &lt;div className="error"&gt;{result.error}&lt;/div&gt;
           ) : (
-            <div className="success">
-              <div>Rows returned: {result.rowCount}</div>
-              <pre>{JSON.stringify(result.rows, null, 2)}</pre>
-            </div>
+            &lt;div className="success"&gt;
+              &lt;div&gt;Rows returned: {result.rowCount}&lt;/div&gt;
+              &lt;pre&gt;{JSON.stringify(result.rows, null, 2)}&lt;/pre&gt;
+            &lt;/div&gt;
           )}
-        </div>
+        &lt;/div&gt;
       )}
-    </div>
+    &lt;/div&gt;
   );
 };
 
