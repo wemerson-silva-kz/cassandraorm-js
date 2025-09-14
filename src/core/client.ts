@@ -117,8 +117,23 @@ export class CassandraClient {
     return {
       connected: this.isConnected(),
       hosts: this.client?.hosts?.length || 0,
-      keyspace: this.options.clientOptions.keyspace
+      keyspace: this.options.clientOptions.keyspace,
+      queryCount: this.queryMetrics.length,
+      avgQueryTime: this.getAverageQueryTime(),
+      errorRate: this.calculateErrorRate()
     };
+  }
+
+  private getAverageQueryTime(): number {
+    if (this.queryMetrics.length === 0) return 0;
+    const total = this.queryMetrics.reduce((sum, m) => sum + (m.duration || 0), 0);
+    return total / this.queryMetrics.length;
+  }
+
+  private calculateErrorRate(): number {
+    if (this.queryMetrics.length === 0) return 0;
+    const errors = this.queryMetrics.filter(m => m.error).length;
+    return errors / this.queryMetrics.length;
   }
 
   // Query builder

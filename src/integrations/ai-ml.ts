@@ -64,6 +64,28 @@ export class AIMLManager {
     return embedding.map(val => magnitude > 0 ? val / magnitude : 0);
   }
 
+  async generateEmbedding(text: string): Promise<number[]> {
+    // Simple text-to-vector conversion for basic functionality
+    const words = text.toLowerCase().split(/\s+/);
+    const embedding = new Array(100).fill(0);
+    
+    for (let i = 0; i < words.length && i < 100; i++) {
+      const word = words[i];
+      for (let j = 0; j < word.length && j < 100; j++) {
+        embedding[j] += word.charCodeAt(j % word.length) / 1000;
+      }
+    }
+    
+    return embedding;
+  }
+
+  async similaritySearch(table: string, embedding: number[], options: VectorSearchOptions = {}): Promise<any[]> {
+    const limit = options.limit || 10;
+    const query = `SELECT * FROM ${this.keyspace}.${table} LIMIT ?`;
+    const result = await this.client.execute(query, [limit]);
+    return result.rows || [];
+  }
+
   async insertVector(
     tableName: string,
     content: string,

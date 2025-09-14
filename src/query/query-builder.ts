@@ -74,6 +74,30 @@ export class QueryBuilder {
     return { query, params };
   }
 
+  // Performance optimization suggestions
+  getOptimizationSuggestions(): string[] {
+    const suggestions: string[] = [];
+    
+    if (this.whereConditions.length > 3) {
+      suggestions.push('Consider using fewer WHERE conditions for better performance');
+    }
+    
+    if (this.selectFields.includes('*')) {
+      suggestions.push('Select specific columns instead of * for better performance');
+    }
+    
+    if (!this.limitValue) {
+      suggestions.push('Consider adding LIMIT to prevent large result sets');
+    }
+    
+    return suggestions;
+  }
+
+  // Smart ALLOW FILTERING detection
+  private shouldAutoAddAllowFiltering(): boolean {
+    return this.whereConditions.length > 0 && !this.allowFilteringEnabled;
+  }
+
   async execute(): Promise<any> {
     const { query, params } = this.build();
     return this.client.execute(query, params);

@@ -114,6 +114,28 @@ export class SemanticCache {
     this.updateMemoryUsage();
   }
 
+  private async generateQueryEmbedding(query: string, params: any[]): Promise<number[]> {
+    // Enhanced embedding generation
+    const normalizedQuery = query.toLowerCase().replace(/\s+/g, ' ').trim();
+    const paramsStr = JSON.stringify(params);
+    const combined = `${normalizedQuery} ${paramsStr}`;
+    
+    // Simple but more effective embedding
+    const words = combined.split(/\W+/).filter(w => w.length > 0);
+    const embedding = new Array(this.config.embeddingDimensions || 128).fill(0);
+    
+    words.forEach((word, i) => {
+      for (let j = 0; j < word.length; j++) {
+        const idx = (word.charCodeAt(j) + i) % embedding.length;
+        embedding[idx] += Math.sin(word.charCodeAt(j) * (i + 1)) * 0.1;
+      }
+    });
+    
+    // Normalize
+    const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+    return magnitude > 0 ? embedding.map(val => val / magnitude) : embedding;
+  }
+
   private findSimilarEntry(queryEmbedding: number[]): CacheEntry | null {
     let bestMatch: CacheEntry | null = null;
     let bestSimilarity = 0;
