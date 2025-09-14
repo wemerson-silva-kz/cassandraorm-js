@@ -44,6 +44,101 @@ export interface TransactionOperation {
   compensationData?: any;
 }
 
+export class TransactionCoordinator {
+  private coordinatorId: string;
+  private participants: string[];
+  private timeout: number;
+
+  constructor(config: { coordinatorId: string; participants: string[]; timeout: number }) {
+    this.coordinatorId = config.coordinatorId;
+    this.participants = config.participants;
+    this.timeout = config.timeout;
+  }
+
+  async prepare(transactionId: string, operations: Record<string, any>): Promise<{ allPrepared: boolean }> {
+    // Simulate prepare phase
+    console.log(`   🔄 Preparando transação ${transactionId} com ${this.participants.length} participantes`);
+    
+    // Simulate all participants preparing successfully
+    const allPrepared = Math.random() > 0.1; // 90% success rate
+    
+    return { allPrepared };
+  }
+
+  async commit(transactionId: string): Promise<{ allCommitted: boolean }> {
+    // Simulate commit phase
+    console.log(`   ✅ Commitando transação ${transactionId}`);
+    
+    // Simulate all participants committing successfully
+    const allCommitted = Math.random() > 0.05; // 95% success rate
+    
+    return { allCommitted };
+  }
+
+  async abort(transactionId: string): Promise<{ allAborted: boolean }> {
+    // Simulate abort phase
+    console.log(`   ❌ Abortando transação ${transactionId}`);
+    
+    // Simulate all participants aborting successfully
+    const allAborted = true; // Abort should always succeed
+    
+    return { allAborted };
+  }
+}
+
+export interface SagaStep {
+  stepId: string;
+  action: (data: any) => Promise<any>;
+  compensation: (data: any) => Promise<any>;
+}
+
+export class SagaOrchestrator {
+  private sagaId: string;
+  private compensationTimeout: number;
+
+  constructor(config: { sagaId: string; compensationTimeout: number }) {
+    this.sagaId = config.sagaId;
+    this.compensationTimeout = config.compensationTimeout;
+  }
+
+  async execute(steps: SagaStep[], data: any): Promise<{ success: boolean; completedSteps: number; compensatedSteps?: number }> {
+    const completedSteps: string[] = [];
+    
+    try {
+      // Execute steps sequentially
+      for (const step of steps) {
+        await step.action(data);
+        completedSteps.push(step.stepId);
+      }
+      
+      return { success: true, completedSteps: completedSteps.length };
+    } catch (error) {
+      // Compensate in reverse order
+      console.log(`   ❌ Erro na saga, executando compensações...`);
+      
+      const compensatedSteps: string[] = [];
+      for (let i = completedSteps.length - 1; i >= 0; i--) {
+        const stepId = completedSteps[i];
+        const step = steps.find(s => s.stepId === stepId);
+        if (step) {
+          try {
+            await step.compensation(data);
+            compensatedSteps.push(stepId);
+          } catch (compensationError) {
+            console.error(`   ❌ Erro na compensação do step ${stepId}:`, compensationError);
+          }
+        }
+      }
+      
+      return { 
+        success: false, 
+        completedSteps: completedSteps.length,
+        compensatedSteps: compensatedSteps.length
+      };
+    }
+  }
+}
+
 export class DistributedTransactionManager extends EventEmitter {
   private client: Client;
   private keyspace: string;

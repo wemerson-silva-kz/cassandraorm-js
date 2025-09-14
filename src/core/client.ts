@@ -411,6 +411,24 @@ export class CassandraClient {
     return Object.fromEntries(this.models);
   }
 
+  async batch(queries: Array<{ query: string; params: any[] }>, options: QueryOptions = {}): Promise<any[]> {
+    if (!this.client) {
+      throw new Error('Client not connected');
+    }
+    
+    const results: any[] = [];
+    for (const { query, params } of queries) {
+      const result = await this.client.execute(query, params, options);
+      results.push(result);
+    }
+    
+    return results;
+  }
+
+  async disconnect(): Promise<void> {
+    return this.close();
+  }
+
   async close(): Promise<void> {
     await this.client.shutdown();
   }
@@ -949,7 +967,7 @@ export class CassandraClient {
         
         const executeOptions = { 
           prepare: true,
-          hints: typeHints.length > 0 ? typeHints : undefined
+          hints: typeHints.length > 0 ? typeHints.filter(h => h !== undefined) as string[] : undefined
         };
         
         await client.execute(query, values, executeOptions);
@@ -1064,11 +1082,15 @@ export class CassandraClient {
             if (!options.ignoreDuplicates) {
               throw error;
             }
-            // Ignorar erros de duplicata se ignoreDuplicates = true
+            // Ignorar duplicatas se a opção estiver habilitada
           }
         }
         
         return results;
+      }
+
+      static async upsert(data: Partial<T>, options: QueryOptions = {}): Promise<T> {
+        return this.create(data, { upsert: true });
       }
 
       static async updateAsync(
@@ -1120,6 +1142,11 @@ export class CassandraClient {
         }
 
         return result;
+      }
+
+      static async createTable(): Promise<void> {
+        const tableName = schema.table_name || schema.options?.table_name || name;
+        await clientInstance.createTableFromSchema(tableName, schema);
       }
 
       static async deleteAsync(

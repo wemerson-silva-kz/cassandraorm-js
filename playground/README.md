@@ -1,129 +1,219 @@
-# 🎮 Playground - CassandraORM JS
+# 🎮 CassandraORM JS - Playground
 
-Testes essenciais para validar as funcionalidades principais do CassandraORM JS.
+Este diretório contém testes abrangentes para todas as funcionalidades do CassandraORM JS. Cada arquivo de teste demonstra uma funcionalidade específica do ORM.
 
-## 🚀 Pré-requisitos
+## 📋 Testes Disponíveis
 
+### 🔧 Funcionalidades Básicas (01-10)
+- **01-connection.test.ts** - Conexão e desconexão básica
+- **02-schema.test.ts** - Carregamento de schemas
+- **03-cassandra-types.test.ts** - Tipos de dados Cassandra
+- **04-crud.test.ts** - Operações CRUD básicas
+- **05-unique-constraints.test.ts** - Restrições únicas
+- **06-batch-operations.test.ts** - Operações em lote
+- **07-relationships.test.ts** - Relacionamentos entre modelos
+- **08-advanced-queries.test.ts** - Consultas avançadas
+- **09-utilities.test.ts** - Utilitários diversos
+- **10-typescript-types.test.ts** - Tipos TypeScript
+
+### 🚀 Funcionalidades Avançadas (11-17)
+- **11-ai-ml-features.test.ts** - IA/ML e busca vetorial
+- **12-event-sourcing.test.ts** - Event Sourcing & CQRS
+- **13-distributed-transactions.test.ts** - Transações distribuídas
+- **14-real-time-subscriptions.test.ts** - Subscriptions em tempo real
+- **15-graphql-integration.test.ts** - Integração GraphQL
+- **16-performance-monitoring.test.ts** - Monitoramento de performance
+- **17-complete-integration.test.ts** - Integração completa (E-commerce)
+
+## 🚀 Como Executar
+
+### Executar Todos os Testes
 ```bash
-# Instalar Bun
-curl -fsSL https://bun.sh/install | bash
+# Executar todos os testes do playground
+npm run test:playground
 
-# Iniciar Cassandra
-docker run -d --name cassandra -p 9042:9042 cassandra:latest
+# Ou usando bun diretamente
+bun run playground/run-all-tests.ts
 ```
 
-## 🧪 Testes Disponíveis
-
-### 1. ⚡ Teste Rápido
+### Executar Testes Individuais
 ```bash
-bun run test:quick
-```
-**Valida:** Conexão básica, schema simples, operações essenciais
+# Funcionalidades básicas
+npm run test:quick          # Testes básicos
+npm run test:crud           # CRUD operations
+npm run test:unique         # Unique constraints
+npm run test:types          # TypeScript types
 
-### 2. 🔒 Teste de Campos Unique
+# Funcionalidades avançadas
+npm run test:ai             # AI/ML features
+npm run test:events         # Event Sourcing
+npm run test:transactions   # Distributed Transactions
+npm run test:subscriptions  # Real-time Subscriptions
+npm run test:graphql        # GraphQL Integration
+npm run test:performance    # Performance Monitoring
+npm run test:integration    # Complete Integration
+
+# Ou executar diretamente
+bun run playground/01-connection.test.ts
+bun run playground/11-ai-ml-features.test.ts
+```
+
+## 📊 Funcionalidades Testadas
+
+### 🔧 Core Features
+- ✅ **BaseModel & CassandraClient** - Core ORM functionality
+- ✅ **Model Schema Definition** - Fields, keys, relations, validation
+- ✅ **CRUD Operations** - Create, Read, Update, Delete
+- ✅ **Unique Constraints** - Field-level and schema-level validation
+- ✅ **Batch Operations** - CreateMany with duplicate handling
+- ✅ **TypeScript Support** - Full type definitions
+
+### 🧠 AI/ML Integration
+- ✅ **AIMLManager** - AI/ML operations management
+- ✅ **Vector Search** - Similarity search with embeddings
+- ✅ **Semantic Cache** - AI-powered intelligent caching
+- ✅ **Query Optimization** - AI-powered query optimization
+- ✅ **Anomaly Detection** - Performance anomaly detection
+
+### 🔄 Event Sourcing & CQRS
+- ✅ **EventStore** - Event storage and retrieval
+- ✅ **BaseAggregateRoot** - Aggregate root pattern
+- ✅ **AggregateRepository** - Repository pattern for aggregates
+- ✅ **Domain Events** - Domain event handling
+- ✅ **Saga Manager** - Saga pattern implementation
+
+### 🔀 Distributed Transactions
+- ✅ **DistributedTransactionManager** - 2PC transactions
+- ✅ **TransactionCoordinator** - Transaction coordination
+- ✅ **SagaOrchestrator** - Saga orchestration
+- ✅ **Compensation Logic** - Failure recovery
+
+### 📡 Real-time Subscriptions
+- ✅ **SubscriptionManager** - Real-time data subscriptions
+- ✅ **WebSocket Support** - Real-time communication
+- ✅ **SSE Support** - Server-Sent Events
+- ✅ **Intelligent Filtering** - Smart subscription filtering
+
+### 🌐 GraphQL Integration
+- ✅ **GraphQLSchemaGenerator** - Auto-generate GraphQL schemas
+- ✅ **CassandraDataSource** - GraphQL data source
+- ✅ **CRUD Resolvers** - Automatic CRUD resolvers
+- ✅ **Custom Types** - Custom GraphQL types
+
+### 📊 Performance & Monitoring
+- ✅ **Monitor** - System monitoring
+- ✅ **MetricsCollector** - Performance metrics collection
+- ✅ **PerformanceProfiler** - Query performance profiling
+- ✅ **PerformanceOptimizer** - Performance optimization
+- ✅ **Health Monitoring** - System health checks
+
+### 🎯 Complete Integration
+- ✅ **E-commerce Platform** - Complete workflow integration
+- ✅ **Multi-feature Integration** - All features working together
+- ✅ **Real-world Scenarios** - Practical use cases
+
+## 🔧 Pré-requisitos
+
+### Cassandra/ScyllaDB
 ```bash
-bun run test:unique
-```
-**Valida:** Campos únicos (email, username, phone), validação de duplicatas
+# Usando Docker
+docker run --name cassandra -p 9042:9042 -d cassandra:latest
 
-### 3. 📋 Teste CRUD Completo
+# Ou usando Docker Compose (recomendado)
+docker-compose up -d
+```
+
+### Node.js/Bun
 ```bash
-bun run test:crud
-```
-**Valida:** Create, Read, Update, Delete, batch operations, timestamps
-
-### 4. 🎯 Teste Completo do ORM
-```bash
-bun run test:complete
-```
-**Valida:** Todas as funcionalidades do ORM em um teste abrangente
-
-## 🎯 Teste Completo - Funcionalidades
-
-O `test:complete` valida **10 categorias principais**:
-
-1. **🔧 CRUD Básico** - Create, Read, Update, Delete
-2. **🔒 Campos Unique** - Validação de duplicatas
-3. **🔄 Upsert** - Insert ou Update automático
-4. **📦 Batch Operations** - CreateMany com ignoreDuplicates
-5. **🔗 Relacionamentos** - Modelos relacionados
-6. **🔍 Queries Avançadas** - Filtros e buscas
-7. **🔧 Utilities** - UUID, TimeUUID, Stats
-8. **📊 Batch Queries** - Múltiplas operações
-9. **📡 Streaming** - Processamento de dados
-10. **🗑️ Delete** - Remoção de registros
-
-## 🔒 Sintaxes de Campos Unique
-
-Ambas as sintaxes funcionam:
-
-```typescript
-// Sintaxe 1: No campo individual
-const schema = {
-  fields: {
-    email: { type: 'text', unique: true },
-    username: { type: 'text', unique: true }
-  }
-};
-
-// Sintaxe 2: No array unique
-const schema = {
-  fields: {
-    email: 'text',
-    username: 'text'
-  },
-  unique: ['email', 'username']
-};
-
-// Sintaxe 3: Mista (ambas juntas)
-const schema = {
-  fields: {
-    email: { type: 'text', unique: true },
-    username: 'text'
-  },
-  unique: ['username'] // Ambos serão unique
-};
+# Instalar dependências
+npm install
+# ou
+bun install
 ```
 
-## 🔄 Upsert e Batch
+## 📈 Relatório de Testes
 
-```typescript
-// Upsert - cria ou atualiza
-const user = await User.create({
-  email: 'john@example.com',
-  name: 'John Updated'
-}, { upsert: true });
-
-// Batch ignorando duplicatas
-const users = await User.createMany([
-  { email: 'user1@example.com', name: 'User 1' },
-  { email: 'existing@example.com', name: 'Duplicate' }, // Ignorado
-  { email: 'user3@example.com', name: 'User 3' }
-], { ignoreDuplicates: true });
-```
-
-## 📊 Exemplo de Saída
+Após executar `npm run test:playground`, você verá um relatório completo:
 
 ```
-🎯 Teste Completo do ORM - CassandraORM JS
-✅ 1. CRUD Básico (Create, Read, Update, Delete)
-✅ 2. Campos Unique com validação
-✅ 3. Upsert (insert ou update)
-✅ 4. Batch Operations (createMany)
-✅ 5. Relacionamentos entre modelos
-✅ 6. Queries avançadas com filtros
-✅ 7. Utilities (UUID, TimeUUID, Stats)
-✅ 8. Batch Queries (múltiplas operações)
-✅ 9. Streaming de dados
-✅ 10. Delete de registros
-🏆 RESULTADO: TODOS OS RECURSOS DO ORM FUNCIONANDO!
+📊 RELATÓRIO FINAL DOS TESTES
+================================================================================
+
+📈 RESUMO GERAL:
+   • Total de testes: 17
+   • ✅ Passou: 17
+   • ❌ Falhou: 0
+   • ⏭️  Pulou: 0
+   • 📊 Taxa de sucesso: 100.0%
+   • ⏱️  Tempo total: 45000ms (45.00s)
+
+🔍 FUNCIONALIDADES TESTADAS:
+   01. ✅ Connection & Disconnection - Conexão básica
+   02. ✅ Schema Loading - Carregamento de schemas
+   03. ✅ Cassandra Types - Tipos de dados Cassandra
+   04. ✅ CRUD Operations - Operações básicas
+   05. ✅ Unique Constraints - Restrições únicas
+   06. ✅ Batch Operations - Operações em lote
+   07. ✅ Relationships - Relacionamentos entre modelos
+   08. ✅ Advanced Queries - Consultas avançadas
+   09. ✅ Utilities - Utilitários diversos
+   10. ✅ TypeScript Types - Tipos TypeScript
+   11. ✅ AI/ML Features - Funcionalidades de IA/ML
+   12. ✅ Event Sourcing - Event Sourcing & CQRS
+   13. ✅ Distributed Transactions - Transações distribuídas
+   14. ✅ Real-time Subscriptions - Subscriptions em tempo real
+   15. ✅ GraphQL Integration - Integração GraphQL
+   16. ✅ Performance Monitoring - Monitoramento de performance
+   17. ✅ Complete Integration - Integração completa
+
+🎉 Todos os testes passaram! O CassandraORM JS está funcionando perfeitamente.
 ```
 
-## 🎯 Como Usar
+## 🐛 Troubleshooting
 
-1. **Começar com teste rápido**: `bun run test:quick`
-2. **Testar campos unique**: `bun run test:unique`  
-3. **Testar CRUD completo**: `bun run test:crud`
-4. **Teste completo do ORM**: `bun run test:complete`
+### Problemas Comuns
 
-**Happy Testing! 🚀**
+1. **Cassandra não conecta**
+   ```bash
+   # Verificar se Cassandra está rodando
+   docker ps | grep cassandra
+   
+   # Verificar logs
+   docker logs cassandra
+   ```
+
+2. **Timeout nos testes**
+   ```bash
+   # Aumentar timeout no arquivo de teste
+   # Ou executar testes individuais
+   ```
+
+3. **Keyspace já existe**
+   ```bash
+   # Os testes criam keyspaces automaticamente
+   # Se houver conflito, limpe o Cassandra
+   docker restart cassandra
+   ```
+
+## 📚 Documentação
+
+- [Documentação Completa](../docs/COMPLETE_DOCUMENTATION.md)
+- [Guia de Migração](../docs/MIGRATION_GUIDE.md)
+- [Exemplos](../examples/)
+
+## 🤝 Contribuindo
+
+Para adicionar novos testes:
+
+1. Crie um arquivo `XX-feature-name.test.ts`
+2. Siga o padrão dos testes existentes
+3. Adicione o script no `package.json`
+4. Execute `npm run test:playground` para validar
+
+## 📄 Licença
+
+MIT License - veja [LICENSE](../LICENSE) para detalhes.
+
+---
+
+**CassandraORM JS - O ORM mais avançado para Cassandra/ScyllaDB** 🚀

@@ -1,38 +1,47 @@
 {
   "name": "cassandraorm-js",
-  "version": "1.0.3",
-  "description": "The most advanced ORM for Apache Cassandra and ScyllaDB with native TypeScript support, AI/ML integration, and enterprise-grade features",
+  "version": "1.0.0",
+  "description": "The most advanced ORM for Apache Cassandra and ScyllaDB with native TypeScript support, AI/ML integration, and enterprise-grade features.",
   "main": "dist/index.js",
-  "type": "module",
   "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target node --format esm",
+    "test": "node playground/test-ci-simple.js",
+    "test:full": "bun test",
+    "test:playground": "bun run ./playground/run-all-tests.ts",
+    "test:quick": "bun run ./playground/test-quick.ts",
+    "test:unique": "bun run ./playground/test-unique-simple.ts",
+    "test:crud": "bun run ./playground/test-crud-simple.ts",
+    "test:complete": "bun run ./playground/test-complete-orm.ts",
+    "test:types": "bun run ./playground/test-final-all-types.ts",
+    "test:ai": "bun run ./playground/11-ai-ml-features.test.ts",
+    "test:events": "bun run ./playground/12-event-sourcing.test.ts",
+    "test:transactions": "bun run ./playground/13-distributed-transactions.test.ts",
+    "test:subscriptions": "bun run ./playground/14-real-time-subscriptions.test.ts",
+    "test:graphql": "bun run ./playground/15-graphql-integration.test.ts",
+    "test:performance": "bun run ./playground/16-performance-monitoring.test.ts",
+    "test:integration": "bun run ./playground/17-complete-integration.test.ts",
+    "prepublishOnly": "npm run build"
+  },
   "keywords": [
     "cassandra",
     "scylladb",
     "orm",
     "typescript",
+    "database",
+    "nosql",
     "ai",
     "ml",
     "vector-search",
     "event-sourcing",
+    "cqrs",
     "graphql",
     "real-time",
-    "enterprise",
-    "nosql",
-    "database",
-    "distributed-transactions",
-    "semantic-caching",
-    "time-series",
-    "query-builder",
-    "migrations",
-    "monitoring",
-    "plugins",
-    "connection-pooling"
+    "distributed",
+    "enterprise"
   ],
-  "author": {
-    "name": "Wemerson Silva",
-    "email": "wemerson.silva.kz@gmail.com",
-    "url": "https://github.com/wemerson-silva-kz"
-  },
+  "author": "Wemerson Silva",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -42,47 +51,27 @@
     "url": "https://github.com/wemerson-silva-kz/cassandraorm-js/issues"
   },
   "homepage": "https://github.com/wemerson-silva-kz/cassandraorm-js#readme",
-  "scripts": {
-    "test": "node playground/test-ci-simple.js",
-    "test:full": "bun test",
-    "test:quick": "bun run ./playground/test-quick.ts",
-    "test:unique": "bun run ./playground/test-unique-simple.ts",
-    "test:crud": "bun run ./playground/test-crud-simple.ts",
-    "test:complete": "bun run ./playground/test-complete-orm.ts",
-    "test:integration": "bun run tests/integration.test.ts",
-    "test:ci": "node playground/test-ci-simple.js",
-    "build": "bun build src/index.ts --outdir dist --target node && cp types.d.ts dist/index.d.ts 2>/dev/null || echo 'Using embedded types...'",
-    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
-    "build:full": "npm run clean && npm run build && npm run build:types",
-    "lint": "eslint src/**/*.ts",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build && npm test",
-    "release": "npm version patch && npm publish && git push --tags",
-    "release:minor": "npm version minor && npm publish && git push --tags",
-    "release:major": "npm version major && npm publish && git push --tags"
-  },
   "dependencies": {
     "cassandra-driver": "^4.7.2"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
-    "eslint": "^8.0.0",
-    "bun-types": "latest"
+    "typescript": "^5.0.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=16.0.0"
   },
   "files": [
-    "src/",
-    "dist/",
+    "dist/**/*",
     "README.md",
-    "README.pt.md",
     "LICENSE",
-    "docs/"
+    "FEATURES.md",
+    "examples/**/*"
   ],
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   }
 }

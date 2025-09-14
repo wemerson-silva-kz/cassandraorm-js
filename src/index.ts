@@ -49,10 +49,14 @@ export { MultiTenantManager } from './middleware/multi-tenant.js';
 
 // Integrations
 export { GraphQLSchemaGenerator, CassandraDataSource } from './integrations/graphql.js';
-export { EventStore, BaseAggregateRoot, AggregateRepository } from './integrations/event-sourcing.js';
-export { DistributedTransactionManager, CassandraParticipant } from './integrations/distributed-transactions.js';
+export { EventStore, BaseAggregateRoot, AggregateRepository, SagaManager } from './integrations/event-sourcing.js';
+export { DistributedTransactionManager, CassandraParticipant, TransactionCoordinator, SagaOrchestrator } from './integrations/distributed-transactions.js';
 export { SubscriptionManager } from './integrations/subscriptions.js';
 export { AIMLManager } from './integrations/ai-ml.js';
+
+// Performance and monitoring
+export { PerformanceProfiler } from './observability/performance-profiler.js';
+export { PerformanceOptimizer } from './observability/performance-optimizer.js';
 
 // Utils
 export { MigrationManager } from "./utils/migrations.js";
@@ -143,6 +147,23 @@ export type {
   AggregateRoot,
   DomainEvent,
   SagaStep,
+  
+  // Distributed transactions
+  TransactionConfig,
+  TransactionStatus,
+  
+  // Subscriptions
+  SubscriptionConfig,
+  SubscriptionFilter,
+  SubscriptionEvent,
+  
+  // AI/ML
+  VectorSearchOptions,
+  AIConfig,
+  
+  // Performance
+  MetricsConfig,
+  TracingConfig,
   
   // Transactions
   TransactionConfig,

@@ -29,12 +29,41 @@ export interface Snapshot {
   timestamp: Date;
 }
 
-export interface AggregateRoot {
-  id: string;
-  version: number;
-  uncommittedEvents: DomainEvent[];
-  applyEvent(event: DomainEvent): void;
-  markEventsAsCommitted(): void;
+export interface SagaStep {
+  stepId: string;
+  action: (data: any) => Promise<any>;
+  compensation: (data: any) => Promise<any>;
+}
+
+export interface SagaDefinition {
+  sagaType: string;
+  handle: (event: DomainEvent) => Promise<DomainEvent[]>;
+}
+
+export class SagaManager {
+  private eventStore: EventStore;
+  private sagas: Map<string, SagaDefinition> = new Map();
+
+  constructor(eventStore: EventStore) {
+    this.eventStore = eventStore;
+  }
+
+  registerSaga(saga: SagaDefinition): void {
+    this.sagas.set(saga.sagaType, saga);
+  }
+
+  async handle(event: DomainEvent): Promise<void> {
+    for (const saga of this.sagas.values()) {
+      try {
+        const resultEvents = await saga.handle(event);
+        for (const resultEvent of resultEvents) {
+          await this.eventStore.saveEvent(resultEvent);
+        }
+      } catch (error) {
+        console.error(`Error in saga ${saga.sagaType}:`, error);
+      }
+    }
+  }
 }
 
 export class EventStore extends EventEmitter {

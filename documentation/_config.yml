@@ -1,0 +1,261 @@
+# CassandraORM JS Documentation Configuration
+
+# Site settings
+title: "CassandraORM JS Documentation"
+description: "The most advanced ORM for Apache Cassandra and ScyllaDB with native TypeScript support, AI/ML integration, and enterprise-grade features."
+baseurl: "/documentation"
+url: "https://cassandraorm.js.org"
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minima
+
+# Navigation structure
+navigation:
+  - title: "Getting Started"
+    url: "/getting-started/"
+    children:
+      - title: "Quick Start"
+        url: "/getting-started/quick-start/"
+      - title: "Installation"
+        url: "/getting-started/installation/"
+      - title: "Configuration"
+        url: "/getting-started/configuration/"
+      - title: "First Steps"
+        url: "/getting-started/first-steps/"
+
+  - title: "Core Features"
+    url: "/core/"
+    children:
+      - title: "Models & Schemas"
+        url: "/core/models-schemas/"
+      - title: "CRUD Operations"
+        url: "/core/crud-operations/"
+      - title: "Data Types"
+        url: "/core/data-types/"
+      - title: "Relationships"
+        url: "/core/relationships/"
+      - title: "Validation"
+        url: "/core/validation/"
+      - title: "Unique Constraints"
+        url: "/core/unique-constraints/"
+
+  - title: "AI/ML Integration"
+    url: "/ai-ml/"
+    children:
+      - title: "Vector Search"
+        url: "/ai-ml/vector-search/"
+      - title: "Semantic Caching"
+        url: "/ai-ml/semantic-caching/"
+      - title: "Query Optimization"
+        url: "/ai-ml/query-optimization/"
+      - title: "Anomaly Detection"
+        url: "/ai-ml/anomaly-detection/"
+
+  - title: "Event Sourcing & CQRS"
+    url: "/event-sourcing/"
+    children:
+      - title: "Event Store"
+        url: "/event-sourcing/event-store/"
+      - title: "Aggregates"
+        url: "/event-sourcing/aggregates/"
+      - title: "Domain Events"
+        url: "/event-sourcing/domain-events/"
+      - title: "Sagas"
+        url: "/event-sourcing/sagas/"
+      - title: "CQRS Patterns"
+        url: "/event-sourcing/cqrs-patterns/"
+
+  - title: "Distributed Systems"
+    url: "/distributed/"
+    children:
+      - title: "Distributed Transactions"
+        url: "/distributed/transactions/"
+      - title: "Two-Phase Commit"
+        url: "/distributed/two-phase-commit/"
+      - title: "Saga Orchestration"
+        url: "/distributed/saga-orchestration/"
+      - title: "Compensation Patterns"
+        url: "/distributed/compensation/"
+
+  - title: "Real-time Features"
+    url: "/real-time/"
+    children:
+      - title: "Subscriptions"
+        url: "/real-time/subscriptions/"
+      - title: "WebSocket Integration"
+        url: "/real-time/websockets/"
+      - title: "Server-Sent Events"
+        url: "/real-time/sse/"
+      - title: "Event Broadcasting"
+        url: "/real-time/broadcasting/"
+
+  - title: "GraphQL Integration"
+    url: "/graphql/"
+    children:
+      - title: "Schema Generation"
+        url: "/graphql/schema-generation/"
+      - title: "Resolvers"
+        url: "/graphql/resolvers/"
+      - title: "Data Sources"
+        url: "/graphql/data-sources/"
+      - title: "Performance"
+        url: "/graphql/performance/"
+
+  - title: "Performance & Monitoring"
+    url: "/performance/"
+    children:
+      - title: "Performance Profiling"
+        url: "/performance/profiling/"
+      - title: "Metrics Collection"
+        url: "/performance/metrics/"
+      - title: "Monitoring"
+        url: "/performance/monitoring/"
+      - title: "Optimization"
+        url: "/performance/optimization/"
+      - title: "Health Checks"
+        url: "/performance/health-checks/"
+
+  - title: "Advanced Queries"
+    url: "/queries/"
+    children:
+      - title: "Query Builder"
+        url: "/queries/query-builder/"
+      - title: "Aggregations"
+        url: "/queries/aggregations/"
+      - title: "Time Series"
+        url: "/queries/time-series/"
+      - title: "Pagination"
+        url: "/queries/pagination/"
+      - title: "Streaming"
+        url: "/queries/streaming/"
+
+  - title: "Developer Tools"
+    url: "/tools/"
+    children:
+      - title: "CLI Tools"
+        url: "/tools/cli/"
+      - title: "VS Code Extension"
+        url: "/tools/vscode/"
+      - title: "Web Dashboard"
+        url: "/tools/dashboard/"
+      - title: "Testing"
+        url: "/tools/testing/"
+
+  - title: "Integrations"
+    url: "/integrations/"
+    children:
+      - title: "Elassandra"
+        url: "/integrations/elassandra/"
+      - title: "Docker"
+        url: "/integrations/docker/"
+      - title: "Kubernetes"
+        url: "/integrations/kubernetes/"
+      - title: "Microservices"
+        url: "/integrations/microservices/"
+
+  - title: "API Reference"
+    url: "/api/"
+    children:
+      - title: "Client API"
+        url: "/api/client/"
+      - title: "Model API"
+        url: "/api/model/"
+      - title: "Types"
+        url: "/api/types/"
+      - title: "Utilities"
+        url: "/api/utilities/"
+
+  - title: "Examples & Tutorials"
+    url: "/examples/"
+    children:
+      - title: "Basic Examples"
+        url: "/examples/basic/"
+      - title: "Advanced Examples"
+        url: "/examples/advanced/"
+      - title: "E-commerce Platform"
+        url: "/examples/ecommerce/"
+      - title: "IoT Data Platform"
+        url: "/examples/iot/"
+      - title: "Social Media App"
+        url: "/examples/social-media/"
+
+  - title: "Migration & Deployment"
+    url: "/migration/"
+    children:
+      - title: "Migration Guide"
+        url: "/migration/from-express-cassandra/"
+      - title: "Production Deployment"
+        url: "/deployment/production/"
+      - title: "Scaling"
+        url: "/deployment/scaling/"
+      - title: "Best Practices"
+        url: "/deployment/best-practices/"
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "docs"
+    values:
+      layout: "default"
+      toc: true
+
+# Syntax highlighting
+kramdown:
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+    span:
+      line_numbers: false
+    block:
+      line_numbers: true
+
+# SEO
+author: "Wemerson Silva"
+twitter:
+  username: "cassandraorm"
+  card: "summary_large_image"
+
+social:
+  name: "CassandraORM JS"
+  links:
+    - "https://github.com/wemerson-silva-kz/cassandraorm-js"
+    - "https://www.npmjs.com/package/cassandraorm-js"
+
+# Analytics
+google_analytics: "G-XXXXXXXXXX"
+
+# Search
+search_enabled: true
+search:
+  heading_level: 2
+  previews: 3
+  preview_words_before: 5
+  preview_words_after: 10
+  tokenizer_separator: /[\s/]+/
+  rel_url: true
+  button: false
