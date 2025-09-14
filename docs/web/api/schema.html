@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema Definition - CassandraORM JS</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-database"></i>
+                <span>CassandraORM JS</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">← API Docs</a></li>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="https://github.com/wemerson-silva-kz/cassandraorm-js" target="_blank">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="example-page">
+        <div class="container">
+            <h1>🏗️ Schema Definition</h1>
+            <p class="example-description">
+                Define models, fields, validation rules, and table constraints.
+            </p>
+
+            <div class="example-section">
+                <h2>📋 Basic Schema</h2>
+                <pre><code class="language-javascript">const User = await client.loadSchema('users', {
+  fields: {
+    id: 'uuid',
+    name: 'text',
+    email: 'text',
+    age: 'int',
+    created_at: 'timestamp'
+  },
+  key: ['id']
+});</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>🔧 Field Types</h2>
+                <h3>Basic Types</h3>
+                <pre><code class="language-javascript">const schema = {
+  fields: {
+    // Text types
+    id: 'uuid',
+    name: 'text',
+    description: 'varchar',
+    
+    // Numeric types
+    age: 'int',
+    score: 'bigint',
+    price: 'decimal',
+    rating: 'float',
+    percentage: 'double',
+    
+    // Boolean
+    is_active: 'boolean',
+    
+    // Date/Time
+    created_at: 'timestamp',
+    birth_date: 'date',
+    login_time: 'time',
+    
+    // Binary
+    avatar: 'blob',
+    
+    // Network
+    ip_address: 'inet',
+    
+    // Collections
+    tags: 'set&lt;text&gt;',
+    scores: 'list&lt;int&gt;',
+    metadata: 'map&lt;text,text&gt;',
+    
+    // Custom types
+    address: 'frozen&lt;address_type&gt;'
+  }
+};</code></pre>
+
+                <h3>Advanced Field Configuration</h3>
+                <pre><code class="language-javascript">const schema = {
+  fields: {
+    id: {
+      type: 'uuid',
+      primary: true,
+      default: () => uuid()
+    },
+    
+    email: {
+      type: 'text',
+      unique: true,
+      validate: {
+        required: true,
+        isEmail: true,
+        minLength: 5,
+        maxLength: 100
+      }
+    },
+    
+    name: {
+      type: 'text',
+      validate: {
+        required: true,
+        minLength: 2,
+        maxLength: 50,
+        matches: /^[a-zA-Z\s]+$/
+      }
+    },
+    
+    age: {
+      type: 'int',
+      validate: {
+        min: 0,
+        max: 150
+      }
+    },
+    
+    password: {
+      type: 'text',
+      encrypted: true,
+      validate: {
+        required: true,
+        minLength: 8
+      }
+    },
+    
+    created_at: {
+      type: 'timestamp',
+      default: () => new Date(),
+      immutable: true
+    },
+    
+    updated_at: {
+      type: 'timestamp',
+      onUpdate: () => new Date()
+    }
+  }
+};</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>🔑 Keys and Indexes</h2>
+                <h3>Primary Key</h3>
+                <pre><code class="language-javascript">// Simple primary key
+const schema = {
+  fields: { id: 'uuid', name: 'text' },
+  key: ['id']
+};
+
+// Composite primary key
+const schema = {
+  fields: { user_id: 'uuid', post_id: 'uuid', created_at: 'timestamp' },
+  key: [['user_id', 'post_id'], 'created_at'] // Partition key + clustering key
+};
+
+// Complex key with multiple clustering columns
+const schema = {
+  fields: { 
+    sensor_id: 'text', 
+    year: 'int', 
+    month: 'int', 
+    day: 'int',
+    timestamp: 'timestamp',
+    value: 'double'
+  },
+  key: [['sensor_id'], 'year', 'month', 'day', 'timestamp']
+};</code></pre>
+
+                <h3>Secondary Indexes</h3>
+                <pre><code class="language-javascript">const schema = {
+  fields: {
+    id: 'uuid',
+    email: 'text',
+    name: 'text',
+    department: 'text',
+    metadata: 'map&lt;text,text&gt;'
+  },
+  key: ['id'],
+  indexes: [
+    'email',           // Simple index
+    'department',      // Simple index
+    'keys(metadata)'   // Map keys index
+  ]
+};</code></pre>
+
+                <h3>Materialized Views</h3>
+                <pre><code class="language-javascript">const schema = {
+  fields: {
+    id: 'uuid',
+    email: 'text',
+    department: 'text',
+    created_at: 'timestamp'
+  },
+  key: ['id'],
+  materializedViews: {
+    users_by_email: {
+      select: ['id', 'email', 'department', 'created_at'],
+      key: ['email', 'id'],
+      where: 'email IS NOT NULL AND id IS NOT NULL'
+    },
+    users_by_department: {
+      select: ['id', 'email', 'department', 'created_at'],
+      key: ['department', 'created_at', 'id'],
+      where: 'department IS NOT NULL AND created_at IS NOT NULL AND id IS NOT NULL'
+    }
+  }
+};</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>✅ Validation Rules</h2>
+                <pre><code class="language-javascript">const schema = {
+  fields: {
+    email: {
+      type: 'text',
+      validate: {
+        required: true,
+        isEmail: true,
+        custom: (value) => {
+          if (!value.endsWith('@company.com')) {
+            throw new Error('Must be company email');
+          }
+        }
+      }
+    },
+    
+    age: {
+      type: 'int',
+      validate: {
+        min: 18,
+        max: 65,
+        custom: (value, record) => {
+          if (record.role === 'admin' && value < 21) {
+            throw new Error('Admin must be at least 21');
+          }
+        }
+      }
+    },
+    
+    phone: {
+      type: 'text',
+      validate: {
+        matches: /^\+?[\d\s\-\(\)]+$/,
+        minLength: 10,
+        maxLength: 15
+      }
+    },
+    
+    tags: {
+      type: 'set&lt;text&gt;',
+      validate: {
+        maxItems: 10,
+        itemValidation: {
+          minLength: 2,
+          maxLength: 20
+        }
+      }
+    }
+  }
+};</code></pre>
+
+                <h3>Built-in Validators</h3>
+                <table class="api-table">
+                    <thead>
+                        <tr>
+                            <th>Validator</th>
+                            <th>Description</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>required</code></td>
+                            <td>Field must have a value</td>
+                            <td><code>required: true</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>minLength</code></td>
+                            <td>Minimum string length</td>
+                            <td><code>minLength: 5</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>maxLength</code></td>
+                            <td>Maximum string length</td>
+                            <td><code>maxLength: 100</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>min</code></td>
+                            <td>Minimum numeric value</td>
+                            <td><code>min: 0</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>max</code></td>
+                            <td>Maximum numeric value</td>
+                            <td><code>max: 150</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>matches</code></td>
+                            <td>Regular expression match</td>
+                            <td><code>matches: /^[A-Z]/</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>isEmail</code></td>
+                            <td>Valid email format</td>
+                            <td><code>isEmail: true</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>isURL</code></td>
+                            <td>Valid URL format</td>
+                            <td><code>isURL: true</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>isUUID</code></td>
+                            <td>Valid UUID format</td>
+                            <td><code>isUUID: true</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>custom</code></td>
+                            <td>Custom validation function</td>
+                            <td><code>custom: (val) => val > 0</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="example-section">
+                <h2>⚙️ Table Options</h2>
+                <pre><code class="language-javascript">const schema = {
+  fields: {
+    id: 'uuid',
+    name: 'text',
+    created_at: 'timestamp'
+  },
+  key: ['id'],
+  options: {
+    // Clustering order
+    clustering_order: {
+      created_at: 'desc'
+    },
+    
+    // Compaction strategy
+    compaction: {
+      class: 'SizeTieredCompactionStrategy',
+      max_threshold: 32,
+      min_threshold: 4
+    },
+    
+    // Compression
+    compression: {
+      class: 'LZ4Compressor',
+      chunk_length_in_kb: 64
+    },
+    
+    // Caching
+    caching: {
+      keys: 'ALL',
+      rows_per_partition: 'NONE'
+    },
+    
+    // TTL
+    default_time_to_live: 86400, // 24 hours
+    
+    // Bloom filter
+    bloom_filter_fp_chance: 0.01,
+    
+    // Comments
+    comment: 'User profiles table'
+  }
+};</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>🔗 Schema Relationships</h2>
+                <pre><code class="language-javascript">const User = await client.loadSchema('users', {
+  fields: {
+    id: 'uuid',
+    name: 'text',
+    email: 'text'
+  },
+  key: ['id'],
+  relations: {
+    posts: {
+      model: 'posts',
+      foreignKey: 'user_id',
+      type: 'hasMany'
+    },
+    profile: {
+      model: 'profiles',
+      foreignKey: 'user_id',
+      type: 'hasOne'
+    }
+  }
+});
+
+const Post = await client.loadSchema('posts', {
+  fields: {
+    id: 'uuid',
+    user_id: 'uuid',
+    title: 'text',
+    content: 'text'
+  },
+  key: ['id'],
+  relations: {
+    author: {
+      model: 'users',
+      foreignKey: 'user_id',
+      type: 'belongsTo'
+    },
+    comments: {
+      model: 'comments',
+      foreignKey: 'post_id',
+      type: 'hasMany'
+    }
+  }
+});</code></pre>
+            </div>
+
+            <div class="api-nav-footer">
+                <div class="nav-links">
+                    <a href="core.html" class="btn">← Core API</a>
+                    <a href="models.html" class="btn btn-primary">Model Operations →</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrations - CassandraORM JS</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-database"></i>
+                <span>CassandraORM JS</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">← API Docs</a></li>
+                <li><a href="../index.html">Home</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="example-page">
+        <div class="container">
+            <h1>🔄 Migrations</h1>
+            <p class="example-description">Schema versioning, migrations, and rollbacks.</p>
+
+            <div class="example-section">
+                <h2>🏗️ Migration System</h2>
+                <pre><code class="language-javascript">// Create migration
+const migration = {
+  version: '001',
+  up: async (client) => {
+    await client.execute(`
+      CREATE TABLE users (
+        id uuid PRIMARY KEY,
+        name text,
+        email text,
+        created_at timestamp
+      )
+    `);
+    
+    await client.execute(`
+      CREATE INDEX ON users (email)
+    `);
+  },
+  down: async (client) => {
+    await client.execute('DROP INDEX users_email_idx');
+    await client.execute('DROP TABLE users');
+  }
+};
+
+// Run migrations
+await client.migrate.up();
+await client.migrate.down();
+await client.migrate.to('003');</code></pre>
+            </div>
+
+            <div class="api-nav-footer">
+                <div class="nav-links">
+                    <a href="hooks.html" class="btn">← Hooks</a>
+                    <a href="serialization.html" class="btn btn-primary">Serialization →</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+</body>
+</html>

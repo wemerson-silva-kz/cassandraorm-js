@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - CassandraORM JS</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-database"></i>
+                <span>CassandraORM JS</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="../index.html">← Back to Home</a></li>
+                <li><a href="https://github.com/wemerson-silva-kz/cassandraorm-js" target="_blank">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="example-page">
+        <div class="container">
+            <h1>📚 API Documentation</h1>
+            <p class="example-description">
+                Complete API reference for CassandraORM JS with all methods, classes, and advanced features.
+            </p>
+
+            <div class="api-nav">
+                <h2>📖 API Sections</h2>
+                <div class="api-grid">
+                    <div class="api-card">
+                        <div class="api-icon">🔌</div>
+                        <h3><a href="core.html">Core API</a></h3>
+                        <p>Client creation, connection management, and basic operations</p>
+                    </div>
+                    
+                    <div class="api-card">
+                        <div class="api-icon">🏗️</div>
+                        <h3><a href="schema.html">Schema Definition</a></h3>
+                        <p>Define models, fields, validation, and constraints</p>
+                    </div>
+                    
+                    <div class="api-card">
+                        <div class="api-icon">💾</div>
+                        <h3><a href="models.html">Model Operations</a></h3>
+                        <p>CRUD operations, batch processing, and data manipulation</p>
+                    </div>
+                    
+                    <div class="api-card">
+                        <div class="api-icon">🔍</div>
+                        <h3><a href="query-builder.html">Query Builder</a></h3>
+                        <p>Fluent query interface with advanced filtering and aggregations</p>
+                    </div>
+                    
+                    <div class="api-card">
+                        <div class="api-icon">🔗</div>
+                        <h3><a href="relationships.html">Relationships</a></h3>
+                        <p>Model relationships, population, and eager loading</p>
+                    </div>
+                    
+                    <div class="api-card">
+                        <div class="api-icon">🎯</div>
+                        <h3><a href="scopes.html">Scopes & Filters</a></h3>
+                        <p>Reusable query scopes and dynamic filtering</p>
+                    </div>
+                    
+                    <div class="api-card">
+                        <div class="api-icon">🎣</div>
+                        <h3><a href="hooks.html">Hooks & Events</a></h3>
+                        <p>Model lifecycle hooks and event handling</p>
+                    </div>
+                    
+                    <div class="api-card">
+                        <div class="api-icon">🔄</div>
+                        <h3><a href="migrations.html">Migrations</a></h3>
+                        <p>Schema versioning, migrations, and rollbacks</p>
+                    </div>
+                    
+                    <div class="api-card">
+                        <div class="api-icon">📄</div>
+                        <h3><a href="serialization.html">Serialization</a></h3>
+                        <p>Data transformation, casting, and API serialization</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quick-reference">
+                <h2>⚡ Quick Reference</h2>
+                <div class="reference-grid">
+                    <div class="reference-section">
+                        <h3>Basic Usage</h3>
+                        <pre><code class="language-javascript">import { createClient } from 'cassandraorm-js';
+
+const client = createClient({
+  clientOptions: {
+    contactPoints: ['127.0.0.1'],
+    localDataCenter: 'datacenter1',
+    keyspace: 'myapp'
+  }
+});
+
+await client.connect();
+
+const User = await client.loadSchema('users', {
+  fields: {
+    id: 'uuid',
+    name: 'text',
+    email: { type: 'text', unique: true }
+  },
+  key: ['id']
+});
+
+// CRUD operations
+const user = await User.save({ name: 'John', email: 'john@example.com' });
+const users = await User.find({ name: 'John' });
+await User.update({ id: user.id }, { name: 'John Doe' });
+await User.delete({ id: user.id });</code></pre>
+                    </div>
+                    
+                    <div class="reference-section">
+                        <h3>Advanced Features</h3>
+                        <pre><code class="language-javascript">// Query Builder
+const results = await User.query()
+  .where('age', '>=', 18)
+  .where('status', '=', 'active')
+  .orderBy('created_at', 'desc')
+  .limit(10)
+  .execute();
+
+// Relationships
+const userWithPosts = await User.findOne(
+  { id: userId }, 
+  { include: ['posts', 'profile'] }
+);
+
+// Scopes
+User.addScope('active', () => ({ status: 'active' }));
+const activeUsers = await User.scope('active').find();
+
+// Hooks
+User.addHook('beforeSave', (data) => {
+  data.updated_at = new Date();
+  return data;
+});</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-footer">
+                <a href="../index.html" class="btn">← Back to Home</a>
+                <a href="https://github.com/wemerson-silva-kz/cassandraorm-js/tree/main/docs" class="btn btn-primary" target="_blank">
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+</body>
+</html>

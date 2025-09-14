@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Builder - CassandraORM JS</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-database"></i>
+                <span>CassandraORM JS</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">← API Docs</a></li>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="https://github.com/wemerson-silva-kz/cassandraorm-js" target="_blank">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="example-page">
+        <div class="container">
+            <h1>🔍 Query Builder</h1>
+            <p class="example-description">
+                Fluent query interface with advanced filtering, sorting, and aggregations.
+            </p>
+
+            <div class="example-section">
+                <h2>🏗️ Basic Query Building</h2>
+                <pre><code class="language-javascript">// Basic query
+const users = await User.query()
+  .where('status', '=', 'active')
+  .where('age', '>=', 18)
+  .orderBy('created_at', 'desc')
+  .limit(10)
+  .execute();
+
+// Method chaining
+const query = User.query()
+  .select(['id', 'name', 'email'])
+  .where('department', '=', 'engineering')
+  .where('salary', '>', 50000)
+  .orderBy('salary', 'desc')
+  .limit(20);
+
+const results = await query.execute();</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>🎯 Where Conditions</h2>
+                <pre><code class="language-javascript">// Comparison operators
+User.query()
+  .where('age', '=', 25)
+  .where('salary', '>', 50000)
+  .where('name', '!=', 'Admin')
+  .where('score', '>=', 80)
+  .where('rating', '<=', 5.0);
+
+// IN and NOT IN
+User.query()
+  .whereIn('department', ['engineering', 'design', 'product'])
+  .whereNotIn('status', ['deleted', 'banned']);
+
+// LIKE patterns
+User.query()
+  .where('email', 'LIKE', '%@company.com')
+  .where('name', 'LIKE', 'John%');
+
+// Range queries
+User.query()
+  .whereBetween('age', 18, 65)
+  .whereBetween('created_at', startDate, endDate);
+
+// Null checks
+User.query()
+  .whereNull('deleted_at')
+  .whereNotNull('email_verified_at');
+
+// Complex conditions
+User.query()
+  .where(function(query) {
+    query.where('department', '=', 'engineering')
+         .orWhere('role', '=', 'admin');
+  })
+  .where('status', '=', 'active');</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>📊 Aggregations</h2>
+                <pre><code class="language-javascript">// Count
+const userCount = await User.query()
+  .where('status', '=', 'active')
+  .count();
+
+// Group by with aggregations
+const departmentStats = await User.query()
+  .select(['department'])
+  .where('status', '=', 'active')
+  .groupBy('department')
+  .count('total_users')
+  .avg('salary', 'avg_salary')
+  .sum('salary', 'total_salary')
+  .min('age', 'min_age')
+  .max('age', 'max_age')
+  .execute();
+
+// Having clause
+const highPayingDepts = await User.query()
+  .groupBy('department')
+  .avg('salary', 'avg_salary')
+  .having('avg_salary', '>', 75000)
+  .execute();</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>🔗 Joins and Relations</h2>
+                <pre><code class="language-javascript">// Include relations
+const usersWithPosts = await User.query()
+  .include(['posts', 'profile'])
+  .where('status', '=', 'active')
+  .execute();
+
+// Nested includes
+const usersWithData = await User.query()
+  .include([
+    'profile',
+    {
+      relation: 'posts',
+      include: ['comments', 'tags']
+    }
+  ])
+  .execute();
+
+// Filter by relation
+const usersWithRecentPosts = await User.query()
+  .whereHas('posts', function(query) {
+    query.where('created_at', '>=', new Date('2024-01-01'));
+  })
+  .execute();</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>📋 Sorting and Pagination</h2>
+                <pre><code class="language-javascript">// Single column sort
+User.query()
+  .orderBy('created_at', 'desc')
+  .orderBy('name', 'asc');
+
+// Multiple column sort
+User.query()
+  .orderBy([
+    { column: 'department', direction: 'asc' },
+    { column: 'salary', direction: 'desc' },
+    { column: 'name', direction: 'asc' }
+  ]);
+
+// Pagination
+const page1 = await User.query()
+  .where('status', '=', 'active')
+  .orderBy('created_at', 'desc')
+  .limit(20)
+  .execute();
+
+// Token-based pagination (Cassandra style)
+const page2 = await User.query()
+  .where('status', '=', 'active')
+  .orderBy('created_at', 'desc')
+  .limit(20)
+  .token(page1.pagingState)
+  .execute();</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>🎨 Advanced Features</h2>
+                <pre><code class="language-javascript">// Raw expressions
+User.query()
+  .selectRaw('COUNT(*) as total')
+  .whereRaw('age > ? AND status = ?', [18, 'active'])
+  .groupByRaw('EXTRACT(year FROM created_at)');
+
+// Subqueries
+const avgSalary = User.query()
+  .select('salary')
+  .where('department', '=', 'engineering')
+  .avg('salary');
+
+const highEarners = await User.query()
+  .where('salary', '>', avgSalary)
+  .execute();
+
+// Window functions
+const rankedUsers = await User.query()
+  .select(['name', 'salary'])
+  .selectRaw('RANK() OVER (PARTITION BY department ORDER BY salary DESC) as rank')
+  .where('department', '=', 'engineering')
+  .execute();
+
+// Conditional selects
+User.query()
+  .select([
+    'name',
+    'email',
+    client.raw('CASE WHEN age >= 18 THEN "adult" ELSE "minor" END as age_group')
+  ]);</code></pre>
+            </div>
+
+            <div class="api-nav-footer">
+                <div class="nav-links">
+                    <a href="models.html" class="btn">← Model Operations</a>
+                    <a href="relationships.html" class="btn btn-primary">Relationships →</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+</body>
+</html>
