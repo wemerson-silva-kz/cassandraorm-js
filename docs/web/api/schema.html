@@ -174,6 +174,82 @@ const schema = {
   key: [['sensor_id'], 'year', 'month', 'day', 'timestamp']
 };</code></pre>
 
+                <h3>Unique Fields</h3>
+                <pre><code class="language-javascript">// Single unique field
+const schema = {
+  fields: {
+    id: 'uuid',
+    email: { type: 'text', unique: true },
+    username: { type: 'text', unique: true },
+    name: 'text'
+  },
+  key: ['id'],
+  unique: ['email', 'username'] // Automatic unique validation
+};
+
+// Multiple unique constraints
+const schema = {
+  fields: {
+    id: 'uuid',
+    email: 'text',
+    phone: 'text',
+    tax_id: 'text',
+    name: 'text'
+  },
+  key: ['id'],
+  unique: [
+    'email',    // Single field unique
+    'phone',    // Single field unique
+    'tax_id',   // Single field unique
+    ['email', 'phone'] // Composite unique constraint
+  ]
+};
+
+// Unique with custom validation
+const User = await client.loadSchema('users', {
+  fields: {
+    id: 'uuid',
+    email: { 
+      type: 'text', 
+      unique: true,
+      validate: { 
+        required: true, 
+        isEmail: true 
+      }
+    },
+    username: {
+      type: 'text',
+      unique: true,
+      validate: {
+        required: true,
+        minLength: 3,
+        maxLength: 20,
+        matches: /^[a-zA-Z0-9_]+$/
+      }
+    }
+  },
+  key: ['id'],
+  unique: ['email', 'username']
+});
+
+// Usage with automatic unique validation
+try {
+  const user1 = await User.save({
+    email: 'john@example.com',
+    username: 'john_doe'
+  });
+  
+  // This will throw a unique constraint error
+  const user2 = await User.save({
+    email: 'john@example.com', // Duplicate email
+    username: 'jane_doe'
+  });
+} catch (error) {
+  if (error.code === 'UNIQUE_CONSTRAINT_VIOLATION') {
+    console.log('Email already exists:', error.field);
+  }
+}</code></pre>
+
                 <h3>Secondary Indexes</h3>
                 <pre><code class="language-javascript">const schema = {
   fields: {
