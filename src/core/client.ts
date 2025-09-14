@@ -102,6 +102,10 @@ export class CassandraClient {
     return this.connected && this.client !== null;
   }
 
+  getQueryMetrics(): any[] {
+    return this.queryMetrics;
+  }
+
   getConnectionState(): any {
     return {
       connected: this.isConnected(),
@@ -170,7 +174,22 @@ export class CassandraClient {
 
   async batch(queries: Array<{ query: string; params: any[] }>, options: QueryOptions = {}): Promise<any> {
     if (!this.client) throw new Error('Client not connected');
-    const result = await this.client.batch(queries, options as any);
+    
+    // Process parameters for each query
+    const processedQueries = queries.map(({ query, params }) => ({
+      query,
+      params: params.map(param => {
+        if (param instanceof Set) {
+          return Array.from(param);
+        }
+        if (param instanceof Map) {
+          return Object.fromEntries(param);
+        }
+        return param;
+      })
+    }));
+    
+    const result = await this.client.batch(processedQueries, options as any);
     return result;
   }
 
@@ -340,6 +359,9 @@ export class BaseModel {
     const params = Object.values(data).map(value => {
       if (value instanceof Set) {
         return Array.from(value);
+      }
+      if (value instanceof Map) {
+        return Object.fromEntries(value);
       }
       return value;
     });
