@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLI Dashboard - CassandraORM JS</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-database"></i>
+                <span>CassandraORM JS</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="../index.html">← Back to Home</a></li>
+                <li><a href="https://github.com/wemerson-silva-kz/cassandraorm-js" target="_blank">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="example-page">
+        <div class="container">
+            <h1>📊 CLI Dashboard Example</h1>
+            <p class="example-description">
+                Real-time monitoring dashboard with CLI tools, performance metrics,
+                and interactive database management.
+            </p>
+
+            <div class="example-section">
+                <h2>🚀 CLI Installation & Setup</h2>
+                <pre><code class="language-bash"># Install CLI globally
+npm install -g cassandraorm-cli
+
+# Initialize new project with dashboard
+cassandraorm init my-project --typescript --dashboard
+
+# Start dashboard server
+cassandraorm dashboard --port 3000 --host 0.0.0.0
+
+# Monitor in real-time
+cassandraorm monitor --metrics --logs --performance</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>📋 Dashboard Server Implementation</h2>
+                <pre><code class="language-javascript">import { 
+  DashboardServer,
+  MetricsCollector,
+  PerformanceMonitor,
+  LogAggregator
+} from 'cassandraorm-js/dashboard';
+import express from 'express';
+import { WebSocketServer } from 'ws';
+
+// Initialize dashboard server
+const dashboard = new DashboardServer({
+  port: 3000,
+  host: '0.0.0.0',
+  authentication: {
+    enabled: true,
+    secret: process.env.DASHBOARD_SECRET || 'your-secret-key'
+  },
+  features: {
+    metrics: true,
+    logs: true,
+    queryAnalyzer: true,
+    schemaVisualizer: true,
+    realTimeMonitoring: true
+  }
+});
+
+// Initialize metrics collector
+const metrics = new MetricsCollector({
+  interval: 5000, // 5 seconds
+  retention: '24h',
+  exporters: ['prometheus', 'json'],
+  customMetrics: {
+    'cassandra.queries.total': 'counter',
+    'cassandra.queries.duration': 'histogram',
+    'cassandra.connections.active': 'gauge',
+    'cassandra.cache.hit_rate': 'gauge'
+  }
+});
+
+// Initialize performance monitor
+const perfMonitor = new PerformanceMonitor({
+  slowQueryThreshold: 100, // ms
+  alertThresholds: {
+    cpu: 80,
+    memory: 85,
+    connections: 90
+  }
+});
+
+// Initialize log aggregator
+const logAggregator = new LogAggregator({
+  sources: ['cassandra', 'application', 'system'],
+  levels: ['error', 'warn', 'info', 'debug'],
+  retention: '7d'
+});
+
+// Start dashboard
+await dashboard.start();</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>📊 Real-time Metrics Dashboard</h2>
+                <pre><code class="language-javascript">// Dashboard routes and WebSocket handlers
+class DashboardAPI {
+  constructor(app, wss, metrics, perfMonitor) {
+    this.app = app;
+    this.wss = wss;
+    this.metrics = metrics;
+    this.perfMonitor = perfMonitor;
+    this.setupRoutes();
+    this.setupWebSocket();
+  }
+
+  setupRoutes() {
+    // Get current metrics
+    this.app.get('/api/metrics', async (req, res) => {
+      const currentMetrics = await this.metrics.getCurrentMetrics();
+      res.json({
+        timestamp: new Date(),
+        metrics: currentMetrics,
+        summary: {
+          totalQueries: currentMetrics['cassandra.queries.total'],
+          avgResponseTime: currentMetrics['cassandra.queries.duration.avg'],
+          activeConnections: currentMetrics['cassandra.connections.active'],
+          cacheHitRate: currentMetrics['cassandra.cache.hit_rate']
+        }
+      });
+    });
+
+    // Get performance history
+    this.app.get('/api/performance/history', async (req, res) => {
+      const { hours = 24 } = req.query;
+      const history = await this.perfMonitor.getHistory(hours);
+      res.json(history);
+    });
+
+    // Get cluster status
+    this.app.get('/api/cluster/status', async (req, res) => {
+      const clusterStatus = await this.getClusterStatus();
+      res.json(clusterStatus);
+    });
+
+    // Get slow queries
+    this.app.get('/api/queries/slow', async (req, res) => {
+      const slowQueries = await this.perfMonitor.getSlowQueries();
+      res.json(slowQueries);
+    });
+
+    // Schema information
+    this.app.get('/api/schema', async (req, res) => {
+      const schema = await this.getSchemaInfo();
+      res.json(schema);
+    });
+
+    // Execute query (with safety checks)
+    this.app.post('/api/query/execute', async (req, res) => {
+      const { query, params = [] } = req.body;
+      
+      try {
+        // Safety check for destructive operations
+        if (this.isDestructiveQuery(query)) {
+          return res.status(403).json({
+            error: 'Destructive queries not allowed via dashboard'
+          });
+        }
+
+        const result = await client.execute(query, params);
+        res.json({
+          success: true,
+          rows: result.rows,
+          rowCount: result.rowLength,
+          executionTime: result.info?.queriedHost ? 'Available' : 'N/A'
+        });
+      } catch (error) {
+        res.status(400).json({
+          error: error.message,
+          success: false
+        });
+      }
+    });
+  }
+
+  setupWebSocket() {
+    this.wss.on('connection', (ws) => {
+      console.log('Dashboard client connected');
+
+      // Send initial data
+      this.sendMetricsUpdate(ws);
+
+      // Setup periodic updates
+      const metricsInterval = setInterval(() => {
+        this.sendMetricsUpdate(ws);
+      }, 5000);
+
+      const logsInterval = setInterval(() => {
+        this.sendLogsUpdate(ws);
+      }, 2000);
+
+      ws.on('close', () => {
+        clearInterval(metricsInterval);
+        clearInterval(logsInterval);
+        console.log('Dashboard client disconnected');
+      });
+
+      // Handle client requests
+      ws.on('message', (message) => {
+        try {
+          const data = JSON.parse(message);
+          this.handleClientMessage(ws, data);
+        } catch (error) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Invalid message format'
+          }));
+        }
+      });
+    });
+  }
+
+  async sendMetricsUpdate(ws) {
+    const metrics = await this.metrics.getCurrentMetrics();
+    const performance = await this.perfMonitor.getCurrentStats();
+    
+    ws.send(JSON.stringify({
+      type: 'metrics_update',
+      data: {
+        metrics,
+        performance,
+        timestamp: new Date()
+      }
+    }));
+  }
+
+  async sendLogsUpdate(ws) {
+    const recentLogs = await logAggregator.getRecentLogs(50);
+    
+    ws.send(JSON.stringify({
+      type: 'logs_update',
+      data: recentLogs
+    }));
+  }
+
+  async getClusterStatus() {
+    // Get cluster information
+    const hosts = await client.getState().getConnectedHosts();
+    const keyspaces = await client.execute('SELECT keyspace_name FROM system_schema.keyspaces');
+    
+    return {
+      hosts: hosts.map(host => ({
+        address: host.address,
+        datacenter: host.datacenter,
+        rack: host.rack,
+        isUp: host.isUp()
+      })),
+      keyspaces: keyspaces.rows.map(row => row.keyspace_name),
+      totalHosts: hosts.length,
+      activeHosts: hosts.filter(host => host.isUp()).length
+    };
+  }
+
+  async getSchemaInfo() {
+    const tables = await client.execute(`
+      SELECT keyspace_name, table_name, comment 
+      FROM system_schema.tables 
+      WHERE keyspace_name NOT IN ('system', 'system_schema', 'system_auth', 'system_distributed', 'system_traces')
+    `);
+
+    const columns = await client.execute(`
+      SELECT keyspace_name, table_name, column_name, type, kind
+      FROM system_schema.columns 
+      WHERE keyspace_name NOT IN ('system', 'system_schema', 'system_auth', 'system_distributed', 'system_traces')
+    `);
+
+    // Group columns by table
+    const tableColumns = {};
+    columns.rows.forEach(col => {
+      const key = `${col.keyspace_name}.${col.table_name}`;
+      if (!tableColumns[key]) {
+        tableColumns[key] = [];
+      }
+      tableColumns[key].push({
+        name: col.column_name,
+        type: col.type,
+        kind: col.kind
+      });
+    });
+
+    return {
+      tables: tables.rows.map(table => ({
+        keyspace: table.keyspace_name,
+        name: table.table_name,
+        comment: table.comment,
+        columns: tableColumns[`${table.keyspace_name}.${table.table_name}`] || []
+      }))
+    };
+  }
+
+  isDestructiveQuery(query) {
+    const destructiveKeywords = ['DROP', 'DELETE', 'TRUNCATE', 'ALTER'];
+    const upperQuery = query.toUpperCase().trim();
+    return destructiveKeywords.some(keyword => upperQuery.startsWith(keyword));
+  }
+
+  handleClientMessage(ws, data) {
+    switch (data.type) {
+      case 'get_table_data':
+        this.handleGetTableData(ws, data.payload);
+        break;
+      case 'analyze_query':
+        this.handleAnalyzeQuery(ws, data.payload);
+        break;
+      default:
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: `Unknown message type: ${data.type}`
+        }));
+    }
+  }
+
+  async handleGetTableData(ws, payload) {
+    const { keyspace, table, limit = 100 } = payload;
+    
+    try {
+      const result = await client.execute(
+        `SELECT * FROM ${keyspace}.${table} LIMIT ?`,
+        [limit]
+      );
+      
+      ws.send(JSON.stringify({
+        type: 'table_data',
+        data: {
+          keyspace,
+          table,
+          rows: result.rows,
+          count: result.rowLength
+        }
+      }));
+    } catch (error) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: `Failed to fetch table data: ${error.message}`
+      }));
+    }
+  }
+
+  async handleAnalyzeQuery(ws, payload) {
+    const { query } = payload;
+    
+    try {
+      const analysis = await this.perfMonitor.analyzeQuery(query);
+      
+      ws.send(JSON.stringify({
+        type: 'query_analysis',
+        data: analysis
+      }));
+    } catch (error) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: `Failed to analyze query: ${error.message}`
+      }));
+    }
+  }
+}</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>🖥️ CLI Commands</h2>
+                <pre><code class="language-bash"># Start interactive dashboard
+cassandraorm dashboard
+
+# Monitor specific keyspace
+cassandraorm monitor --keyspace myapp
+
+# Generate performance report
+cassandraorm report --output performance-report.json
+
+# Schema operations
+cassandraorm schema:show --keyspace myapp
+cassandraorm schema:export --keyspace myapp --output schema.cql
+cassandraorm schema:compare --source myapp --target myapp_staging
+
+# Query operations
+cassandraorm query "SELECT * FROM users LIMIT 10"
+cassandraorm query:analyze "SELECT * FROM users WHERE email = ?"
+cassandraorm query:explain "SELECT * FROM orders WHERE status = 'pending'"
+
+# Backup and restore
+cassandraorm backup --keyspace myapp --output backup.tar.gz
+cassandraorm restore --input backup.tar.gz --keyspace myapp_restored
+
+# Migration operations
+cassandraorm migrate:status
+cassandraorm migrate:up
+cassandraorm migrate:down
+cassandraorm migrate:create add_user_preferences
+
+# Performance tuning
+cassandraorm tune:analyze --keyspace myapp
+cassandraorm tune:suggest --slow-queries
+cassandraorm tune:index --table users --column email
+
+# Cluster management
+cassandraorm cluster:status
+cassandraorm cluster:health
+cassandraorm cluster:repair --keyspace myapp
+
+# Development tools
+cassandraorm generate:model User --fields "name:text,email:text"
+cassandraorm generate:migration add_user_table
+cassandraorm generate:seed users --count 1000
+
+# Testing
+cassandraorm test:connection
+cassandraorm test:performance --duration 60s
+cassandraorm test:load --concurrent 100 --duration 30s</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>📱 Frontend Dashboard (React)</h2>
+                <pre><code class="language-javascript">// Dashboard React component
+import React, { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+const CassandraDashboard = () => {
+  const [metrics, setMetrics] = useState({});
+  const [logs, setLogs] = useState([]);
+  const [clusterStatus, setClusterStatus] = useState({});
+  const [ws, setWs] = useState(null);
+
+  useEffect(() => {
+    // Connect to WebSocket
+    const websocket = new WebSocket('ws://localhost:3000/ws');
+    
+    websocket.onopen = () => {
+      console.log('Connected to dashboard');
+      setWs(websocket);
+    };
+
+    websocket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      switch (data.type) {
+        case 'metrics_update':
+          setMetrics(data.data.metrics);
+          break;
+        case 'logs_update':
+          setLogs(data.data);
+          break;
+        case 'cluster_status':
+          setClusterStatus(data.data);
+          break;
+      }
+    };
+
+    return () => {
+      websocket.close();
+    };
+  }, []);
+
+  const executeQuery = async (query) => {
+    const response = await fetch('/api/query/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    
+    return await response.json();
+  };
+
+  return (
+    <div className="dashboard">
+      <header className="dashboard-header">
+        <h1>CassandraORM Dashboard</h1>
+        <div className="status-indicators">
+          <div className="status-item">
+            <span className="label">Active Connections:</span>
+            <span className="value">{metrics['cassandra.connections.active'] || 0}</span>
+          </div>
+          <div className="status-item">
+            <span className="label">Queries/sec:</span>
+            <span className="value">{metrics['cassandra.queries.rate'] || 0}</span>
+          </div>
+          <div className="status-item">
+            <span className="label">Cache Hit Rate:</span>
+            <span className="value">{((metrics['cassandra.cache.hit_rate'] || 0) * 100).toFixed(1)}%</span>
+          </div>
+        </div>
+      </header>
+
+      <div className="dashboard-grid">
+        {/* Performance Chart */}
+        <div className="dashboard-card">
+          <h3>Query Performance</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={metrics.history || []}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="timestamp" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="avgResponseTime" stroke="#8884d8" />
+              <Line type="monotone" dataKey="queriesPerSecond" stroke="#82ca9d" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Cluster Status */}
+        <div className="dashboard-card">
+          <h3>Cluster Status</h3>
+          <div className="cluster-nodes">
+            {(clusterStatus.hosts || []).map((host, index) => (
+              <div key={index} className={`node ${host.isUp ? 'up' : 'down'}`}>
+                <div className="node-address">{host.address}</div>
+                <div className="node-dc">{host.datacenter}</div>
+                <div className="node-status">{host.isUp ? 'UP' : 'DOWN'}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Logs */}
+        <div className="dashboard-card">
+          <h3>Recent Logs</h3>
+          <div className="logs-container">
+            {logs.slice(0, 20).map((log, index) => (
+              <div key={index} className={`log-entry ${log.level}`}>
+                <span className="log-timestamp">{log.timestamp}</span>
+                <span className="log-level">{log.level.toUpperCase()}</span>
+                <span className="log-message">{log.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Query Executor */}
+        <div className="dashboard-card">
+          <h3>Query Executor</h3>
+          <QueryExecutor onExecute={executeQuery} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const QueryExecutor = ({ onExecute }) => {
+  const [query, setQuery] = useState('');
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleExecute = async () => {
+    setLoading(true);
+    try {
+      const result = await onExecute(query);
+      setResult(result);
+    } catch (error) {
+      setResult({ error: error.message });
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="query-executor">
+      <textarea
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Enter CQL query..."
+        rows={4}
+      />
+      <button onClick={handleExecute} disabled={loading}>
+        {loading ? 'Executing...' : 'Execute Query'}
+      </button>
+      
+      {result && (
+        <div className="query-result">
+          {result.error ? (
+            <div className="error">{result.error}</div>
+          ) : (
+            <div className="success">
+              <div>Rows returned: {result.rowCount}</div>
+              <pre>{JSON.stringify(result.rows, null, 2)}</pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default CassandraDashboard;</code></pre>
+            </div>
+
+            <div class="example-section">
+                <h2>📈 Performance Metrics</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <h3>Real-time Monitoring</h3>
+                        <p>5-second update intervals</p>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Query Analysis</h3>
+                        <p>Automatic slow query detection</p>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Cluster Health</h3>
+                        <p>Multi-DC status monitoring</p>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Interactive Tools</h3>
+                        <p>Query executor & schema browser</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-footer">
+                <a href="../index.html" class="btn">← Back to Home</a>
+                <a href="https://github.com/wemerson-silva-kz/cassandraorm-js/tree/main/examples" class="btn btn-primary" target="_blank">
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+</body>
+</html>
