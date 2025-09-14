@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Express.js API Example - CassandraORM JS</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-database"></i>
+                <a href="../index.html" style="color: white; text-decoration: none;">
+                    <span>CassandraORM JS</span>
+                </a>
+                <span class="version">v1.0.3</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="../index.html">← Back to Docs</a></li>
+                <li><a href="https://github.com/wemerson-silva-kz/cassandraorm-js" target="_blank">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main style="padding-top: 80px;">
+        <section class="hero" style="padding: 60px 0;">
+            <div class="hero-content">
+                <h1><i class="fas fa-server"></i> Express.js API</h1>
+                <p class="hero-subtitle">Complete CRUD API with Express.js and CassandraORM</p>
+                <p class="hero-description">
+                    Build a production-ready REST API with all CassandraORM features:
+                    validation, relationships, hooks, and more.
+                </p>
+            </div>
+        </section>
+
+        <section class="container" style="padding: 40px 20px;">
+            <div class="example-content">
+                <h2>🚀 Complete Express.js API Example</h2>
+                
+                <div class="example-tabs">
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" data-tab="setup">Setup</button>
+                        <button class="tab-btn" data-tab="models">Models</button>
+                        <button class="tab-btn" data-tab="routes">Routes</button>
+                        <button class="tab-btn" data-tab="middleware">Middleware</button>
+                        <button class="tab-btn" data-tab="server">Server</button>
+                    </div>
+
+                    <!-- Setup Tab -->
+                    <div class="tab-content active" id="setup">
+                        <h3>📦 Project Setup</h3>
+                        
+                        <h4>Install Dependencies</h4>
+                        <pre><code class="language-bash"># Create new project
+mkdir express-cassandra-api
+cd express-cassandra-api
+
+# Initialize package.json
+npm init -y
+
+# Install dependencies
+npm install express cors helmet morgan compression
+npm install cassandraorm-js
+npm install dotenv express-rate-limit express-validator
+
+# Install dev dependencies
+npm install -D nodemon @types/node typescript</code></pre>
+
+                        <h4>Package.json Scripts</h4>
+                        <pre><code class="language-json">{
+  "name": "express-cassandra-api",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "test": "node test/api.test.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cassandraorm-js": "^1.0.3",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "compression": "^1.7.4",
+    "dotenv": "^16.3.1",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1"
+  }
+}</code></pre>
+
+                        <h4>Environment Configuration</h4>
+                        <pre><code class="language-bash"># .env
+PORT=3000
+NODE_ENV=development
+
+# Cassandra Configuration
+CASSANDRA_HOSTS=127.0.0.1
+CASSANDRA_DATACENTER=datacenter1
+CASSANDRA_KEYSPACE=express_api
+
+# Security
+JWT_SECRET=your-super-secret-jwt-key
+RATE_LIMIT_WINDOW=15
+RATE_LIMIT_MAX=100</code></pre>
+                    </div>
+
+                    <!-- Models Tab -->
+                    <div class="tab-content" id="models">
+                        <h3>📊 Data Models</h3>
+                        
+                        <h4>models/User.js</h4>
+                        <pre><code class="language-javascript">import { createClient } from 'cassandraorm-js';
+
+// User model with all CassandraORM features
+export const userSchema = {
+  fields: {
+    id: 'uuid',
+    email: 'text',
+    name: 'text',
+    password: 'text',
+    avatar_url: 'text',
+    status: 'text',
+    role: 'text',
+    profile_data: 'text', // JSON string
+    created_at: 'timestamp',
+    updated_at: 'timestamp',
+    deleted_at: 'timestamp'
+  },
+  key: ['id'],
+  unique: ['email'], // ✅ Automatic unique validation
+  
+  // ✅ Hooks for business logic
+  hooks: {
+    beforeSave: (data) => {
+      data.updated_at = new Date();
+      if (!data.created_at) data.created_at = new Date();
+      if (!data.status) data.status = 'active';
+      if (!data.role) data.role = 'user';
+      return data;
+    },
+    
+    afterFind: (data) => {
+      // Remove sensitive data
+      if (Array.isArray(data)) {
+        return data.map(user => {
+          const { password, ...safeUser } = user;
+          return safeUser;
+        });
+      } else {
+        const { password, ...safeUser } = data;
+        return safeUser;
+      }
+    }
+  },
+  
+  // ✅ Scopes for reusable queries
+  scopes: {
+    active: () => ({ status: 'active' }),
+    recent: (days = 30) => ({
+      created_at: { $gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) }
+    }),
+    byRole: (role) => ({ role })
+  },
+  
+  // ✅ Relationships
+  relations: {
+    posts: { model: 'Post', type: 'hasMany', foreignKey: 'user_id' },
+    profile: { model: 'Profile', type: 'hasOne', foreignKey: 'user_id' }
+  },
+  
+  // ✅ Serialization options
+  options: {
+    hidden: ['password'],
+    appends: ['full_name', 'posts_count'],
+    casts: {
+      profile_data: 'json',
+      created_at: 'date'
+    }
+  }
+};
+
+// Post model
+export const postSchema = {
+  fields: {
+    id: 'timeuuid',
+    user_id: 'uuid',
+    title: 'text',
+    content: 'text',
+    slug: 'text',
+    published: 'boolean',
+    tags: 'set<text>',
+    view_count: 'counter',
+    created_at: 'timestamp',
+    updated_at: 'timestamp',
+    deleted_at: 'timestamp'
+  },
+  key: ['user_id', 'id'],
+  unique: ['slug'],
+  
+  hooks: {
+    beforeSave: (data) => {
+      data.updated_at = new Date();
+      if (!data.created_at) data.created_at = new Date();
+      if (!data.published) data.published = false;
+      
+      // Generate slug from title
+      if (data.title && !data.slug) {
+        data.slug = data.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+      }
+      
+      return data;
+    }
+  },
+  
+  scopes: {
+    published: () => ({ published: true }),
+    byUser: (userId) => ({ user_id: userId }),
+    recent: (days = 7) => ({
+      created_at: { $gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) }
+    })
+  },
+  
+  relations: {
+    author: { model: 'User', type: 'belongsTo', foreignKey: 'user_id' }
+  }
+};</code></pre>
+                    </div>
+
+                    <!-- Routes Tab -->
+                    <div class="tab-content" id="routes">
+                        <h3>🛣️ API Routes</h3>
+                        
+                        <h4>routes/users.js</h4>
+                        <pre><code class="language-javascript">import express from 'express';
+import { body, validationResult } from 'express-validator';
+import bcrypt from 'bcrypt';
+import { uuid } from 'cassandraorm-js';
+
+const router = express.Router();
+
+// GET /api/users - List users with scopes
+router.get('/', async (req, res) => {
+  try {
+    const { status, role, recent, page = 1, limit = 10 } = req.query;
+    
+    // Build query with scopes
+    let query = req.app.locals.User.query();
+    
+    if (status) query = query.scope('active');
+    if (role) query = query.scope('byRole', role);
+    if (recent) query = query.scope('recent', parseInt(recent));
+    
+    // Pagination
+    const offset = (page - 1) * limit;
+    const users = await query.limit(parseInt(limit)).offset(offset).get();
+    
+    // Get total count
+    const total = await req.app.locals.User.count();
+    
+    res.json({
+      success: true,
+      data: users,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// GET /api/users/:id - Get user by ID with relationships
+router.get('/:id', async (req, res) => {
+  try {
+    const { include } = req.query;
+    
+    let query = req.app.locals.User.where('id', req.params.id);
+    
+    // Include relationships
+    if (include) {
+      const relations = include.split(',');
+      query = query.with(relations);
+    }
+    
+    const user = await query.first();
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// POST /api/users - Create user with validation
+router.post('/', [
+  body('email').isEmail().normalizeEmail(),
+  body('name').isLength({ min: 2, max: 100 }).trim(),
+  body('password').isLength({ min: 6 })
+], async (req, res) => {
+  try {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+    
+    const { email, name, password, role = 'user' } = req.body;
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+    
+    // Create user (automatic unique validation)
+    const user = new req.app.locals.User({
+      id: uuid(),
+      email,
+      name,
+      password: hashedPassword,
+      role
+    });
+    
+    await user.save(); // ✅ Hooks and validation automatic
+    
+    res.status(201).json({
+      success: true,
+      data: user.toJSON() // ✅ Automatic serialization
+    });
+    
+  } catch (error) {
+    // Handle unique constraint violations
+    if (error.message.includes('already exists')) {
+      return res.status(409).json({
+        success: false,
+        error: 'Email already exists'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// PUT /api/users/:id - Update user
+router.put('/:id', [
+  body('email').optional().isEmail().normalizeEmail(),
+  body('name').optional().isLength({ min: 2, max: 100 }).trim()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+    
+    const user = await req.app.locals.User.find(req.params.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    // Update fields
+    Object.assign(user, req.body);
+    await user.save(); // ✅ Automatic validation and hooks
+    
+    res.json({
+      success: true,
+      data: user.toJSON()
+    });
+    
+  } catch (error) {
+    if (error.message.includes('already exists')) {
+      return res.status(409).json({
+        success: false,
+        error: 'Email already exists'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// DELETE /api/users/:id - Soft delete user
+router.delete('/:id', async (req, res) => {
+  try {
+    const user = await req.app.locals.User.find(req.params.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    // Soft delete
+    await user.softDelete(); // ✅ Soft delete feature
+    
+    res.json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+export default router;</code></pre>
+
+                        <h4>routes/posts.js</h4>
+                        <pre><code class="language-javascript">import express from 'express';
+import { body, validationResult } from 'express-validator';
+import { timeuuid } from 'cassandraorm-js';
+
+const router = express.Router();
+
+// GET /api/posts - List posts with filters
+router.get('/', async (req, res) => {
+  try {
+    const { published, user_id, recent, page = 1, limit = 10 } = req.query;
+    
+    let query = req.app.locals.Post.query();
+    
+    // Apply scopes
+    if (published === 'true') query = query.scope('published');
+    if (user_id) query = query.scope('byUser', user_id);
+    if (recent) query = query.scope('recent', parseInt(recent));
+    
+    // Include author relationship
+    query = query.with(['author']);
+    
+    const posts = await query
+      .limit(parseInt(limit))
+      .offset((page - 1) * limit)
+      .get();
+    
+    res.json({
+      success: true,
+      data: posts
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// POST /api/posts - Create post
+router.post('/', [
+  body('title').isLength({ min: 5, max: 200 }).trim(),
+  body('content').isLength({ min: 10 }).trim(),
+  body('user_id').isUUID()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+    
+    const { title, content, user_id, tags = [] } = req.body;
+    
+    const post = new req.app.locals.Post({
+      id: timeuuid(),
+      user_id,
+      title,
+      content,
+      tags: new Set(tags)
+    });
+    
+    await post.save(); // ✅ Auto slug generation via hooks
+    
+    res.status(201).json({
+      success: true,
+      data: post.toJSON()
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+export default router;</code></pre>
+                    </div>
+
+                    <!-- Middleware Tab -->
+                    <div class="tab-content" id="middleware">
+                        <h3>🛡️ Middleware</h3>
+                        
+                        <h4>middleware/database.js</h4>
+                        <pre><code class="language-javascript">import { createClient } from 'cassandraorm-js';
+import { userSchema, postSchema } from '../models/User.js';
+
+export async function initializeDatabase(app) {
+  try {
+    // Create CassandraORM client
+    const client = createClient({
+      clientOptions: {
+        contactPoints: [process.env.CASSANDRA_HOSTS || '127.0.0.1'],
+        localDataCenter: process.env.CASSANDRA_DATACENTER || 'datacenter1',
+        keyspace: process.env.CASSANDRA_KEYSPACE || 'express_api'
+      },
+      ormOptions: {
+        createKeyspace: true,
+        migration: 'safe'
+      }
+    });
+
+    await client.connect();
+    console.log('✅ Connected to Cassandra');
+
+    // Load schemas with all features
+    const User = await client.loadSchema('users', userSchema);
+    const Post = await client.loadSchema('posts', postSchema);
+
+    console.log('✅ Models loaded with all CassandraORM features');
+
+    // Make models available in app
+    app.locals.client = client;
+    app.locals.User = User;
+    app.locals.Post = Post;
+
+    return client;
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    process.exit(1);
+  }
+}</code></pre>
+
+                        <h4>middleware/security.js</h4>
+                        <pre><code class="language-javascript">import helmet from 'helmet';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+
+// Security middleware
+export const securityMiddleware = [
+  // Helmet for security headers
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"]
+      }
+    }
+  }),
+
+  // CORS configuration
+  cors({
+    origin: process.env.NODE_ENV === 'production' 
+      ? ['https://yourdomain.com'] 
+      : true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }),
+
+  // Rate limiting
+  rateLimit({
+    windowMs: (process.env.RATE_LIMIT_WINDOW || 15) * 60 * 1000,
+    max: process.env.RATE_LIMIT_MAX || 100,
+    message: {
+      success: false,
+      error: 'Too many requests, please try again later'
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+  })
+];
+
+// Error handling middleware
+export const errorHandler = (err, req, res, next) => {
+  console.error('Error:', err);
+
+  // CassandraORM unique constraint error
+  if (err.message && err.message.includes('already exists')) {
+    return res.status(409).json({
+      success: false,
+      error: 'Resource already exists',
+      details: err.message
+    });
+  }
+
+  // Validation errors
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      success: false,
+      error: 'Validation failed',
+      details: err.message
+    });
+  }
+
+  // Default error
+  res.status(500).json({
+    success: false,
+    error: process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : err.message
+  });
+};</code></pre>
+                    </div>
+
+                    <!-- Server Tab -->
+                    <div class="tab-content" id="server">
+                        <h3>🚀 Server Setup</h3>
+                        
+                        <h4>server.js</h4>
+                        <pre><code class="language-javascript">import express from 'express';
+import morgan from 'morgan';
+import compression from 'compression';
+import dotenv from 'dotenv';
+
+// Import middleware and routes
+import { initializeDatabase } from './middleware/database.js';
+import { securityMiddleware, errorHandler } from './middleware/security.js';
+import usersRouter from './routes/users.js';
+import postsRouter from './routes/posts.js';
+
+// Load environment variables
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Basic middleware
+app.use(compression());
+app.use(morgan('combined'));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// Security middleware
+app.use(securityMiddleware);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Express + CassandraORM API is running',
+    timestamp: new Date().toISOString(),
+    features: [
+      'Query Builder Advanced',
+      'Relationships',
+      'Hooks & Events',
+      'Unique Validation',
+      'Scopes & Filters',
+      'Serialization',
+      'Soft Deletes'
+    ]
+  });
+});
+
+// API routes
+app.use('/api/users', usersRouter);
+app.use('/api/posts', postsRouter);
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Route not found'
+  });
+});
+
+// Error handling
+app.use(errorHandler);
+
+// Start server
+async function startServer() {
+  try {
+    // Initialize database with all CassandraORM features
+    await initializeDatabase(app);
+    
+    app.listen(PORT, () => {
+      console.log(`
+🚀 Express + CassandraORM API Server Started!
+
+📍 Server: http://localhost:${PORT}
+🏥 Health: http://localhost:${PORT}/health
+📚 Users API: http://localhost:${PORT}/api/users
+📝 Posts API: http://localhost:${PORT}/api/posts
+
+✅ Features Active:
+  🔍 Query Builder Advanced
+  🔗 Relationships (hasOne, hasMany, belongsTo)
+  🎣 Hooks & Events (beforeSave, afterSave)
+  🔒 Unique Field Validation
+  🎯 Scopes & Filters
+  📄 Serialization (hidden, appends, casts)
+  🗑️ Soft Deletes
+  🛡️ Security Middleware
+  📊 Request Logging
+      `);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('🔄 Graceful shutdown initiated...');
+  
+  if (app.locals.client) {
+    await app.locals.client.disconnect();
+    console.log('✅ Database disconnected');
+  }
+  
+  process.exit(0);
+});
+
+startServer();</code></pre>
+
+                        <h4>Test the API</h4>
+                        <pre><code class="language-bash"># Start the server
+npm run dev
+
+# Test endpoints
+curl http://localhost:3000/health
+
+# Create user (with automatic unique validation)
+curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "secret123"
+  }'
+
+# Get users with scopes
+curl "http://localhost:3000/api/users?status=active&recent=7"
+
+# Create post (with relationships)
+curl -X POST http://localhost:3000/api/posts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "My First Post",
+    "content": "This is the content of my first post",
+    "user_id": "USER_ID_HERE",
+    "tags": ["javascript", "cassandra", "orm"]
+  }'</code></pre>
+                    </div>
+                </div>
+
+                <div class="example-features">
+                    <h3>✅ Features Demonstrated</h3>
+                    <div class="features-grid">
+                        <div class="feature-item">
+                            <div class="feature-icon">🔒</div>
+                            <div class="feature-content">
+                                <h4>Unique Validation</h4>
+                                <p>Automatic email uniqueness without auxiliary tables</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🎣</div>
+                            <div class="feature-content">
+                                <h4>Hooks & Events</h4>
+                                <p>beforeSave, afterSave for timestamps and data processing</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🎯</div>
+                            <div class="feature-content">
+                                <h4>Scopes & Filters</h4>
+                                <p>Reusable queries: active(), recent(), byRole()</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🔗</div>
+                            <div class="feature-content">
+                                <h4>Relationships</h4>
+                                <p>hasMany posts, belongsTo author with eager loading</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">📄</div>
+                            <div class="feature-content">
+                                <h4>Serialization</h4>
+                                <p>Hidden fields, appends, casts for API responses</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🗑️</div>
+                            <div class="feature-content">
+                                <h4>Soft Deletes</h4>
+                                <p>Logical deletion with restore functionality</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="../js/main.js"></script>
+</body>
+</html>

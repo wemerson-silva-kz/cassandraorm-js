@@ -21,6 +21,14 @@ import { ElassandraClient, type ElasticsearchConfig, type SearchQuery } from '..
 import { ModelLoader } from '../utils/model-loader.js';
 import { StreamingQuery, createModelStream } from '../utils/streaming.js';
 import { UniqueConstraintManager } from '../validation/unique-constraints.js';
+import { QueryBuilder } from '../query/query-builder.js';
+import { RelationsManager } from '../query/relations.js';
+import { HooksManager } from '../middleware/hooks-middleware.js';
+import { MigrationManager } from '../utils/migrations.js';
+import { ScopesManager, ScopedQueryBuilder } from '../query/scopes.js';
+import { SoftDeleteManager, SoftDeleteQueryBuilder } from '../middleware/soft-deletes.js';
+import { SerializationManager } from '../utils/serialization.js';
+import { EncryptionManager } from '../utils/encryption.js';
 
 export abstract class BaseModel implements BaseModelInstance {
   _modified: Record<string, boolean> = {};
@@ -516,6 +524,27 @@ export class CassandraClient {
     }
   }
 
+  // Import all new managers
+  private queryBuilder?: QueryBuilder;
+  private relationsManager?: RelationsManager;
+  private hooksManager?: HooksManager;
+  private migrationManager?: MigrationManager;
+  private scopesManager?: ScopesManager;
+  private softDeleteManager?: SoftDeleteManager;
+  private serializationManager?: SerializationManager;
+  private encryptionManager?: EncryptionManager;
+
+  // Initialize all managers
+  private initializeManagers(): void {
+    this.relationsManager = new RelationsManager(this.client, this.keyspace || '');
+    this.hooksManager = new HooksManager();
+    this.migrationManager = new MigrationManager(this.client, this.keyspace || '');
+    this.scopesManager = new ScopesManager();
+    this.softDeleteManager = new SoftDeleteManager();
+    this.serializationManager = new SerializationManager();
+    this.encryptionManager = new EncryptionManager();
+  }
+
   async validateUniqueFields(tableName: string, data: Record<string, any>, schema: ModelSchema, excludeId?: string): Promise<void> {
     if (!schema.unique || schema.unique.length === 0) {
       return;
@@ -590,6 +619,7 @@ export class CassandraClient {
   ): ModelStatic<T> {
     const client = this.client;
     const keyspace = this.keyspace;
+    const clientInstance = this; // Referência para a instância do CassandraClient
 
     class Model extends BaseModel {
       constructor(data: Partial<T> = {}) {
@@ -658,6 +688,28 @@ export class CassandraClient {
         }
       }
 
+      toObject(): Record<string, any> {
+        const obj: Record<string, any> = {};
+        for (const field of Object.keys(schema.fields)) {
+          obj[field] = (this as any)[field];
+        }
+        return obj;
+      }
+
+      isNew(): boolean {
+        return this._isNew !== false;
+      }
+
+      getModifiedFields(): Record<string, any> {
+        const modified: Record<string, any> = {};
+        for (const [field, isModified] of Object.entries(this._modified)) {
+          if (isModified) {
+            modified[field] = (this as any)[field];
+          }
+        }
+        return modified;
+      }
+
       async save(options: QueryOptions = {}): Promise<this> {
         return this.saveAsync(options);
       }
@@ -669,6 +721,30 @@ export class CassandraClient {
         // Before save hook
         if (schema.before_save && !schema.before_save(this as any, finalOptions)) {
           throw new Error("before_save hook returned false");
+        }
+
+        // Validação automática de campos únicos
+        if (schema.unique && schema.unique.length > 0) {
+          const tableName = schema.options?.table_name || name;
+          const data = this.toObject();
+          
+          // Para novos registros ou registros modificados
+          if (this.isNew() || Object.keys(this._modified).length > 0) {
+            if (this.isNew()) {
+              await clientInstance.validateUniqueFields(tableName, data, schema);
+            } else {
+              // Para updates, validar apenas campos modificados que são únicos
+              const modifiedUniqueData: any = {};
+              for (const field of schema.unique) {
+                if (this._modified[field] && data[field] !== undefined) {
+                  modifiedUniqueData[field] = data[field];
+                }
+              }
+              if (Object.keys(modifiedUniqueData).length > 0) {
+                await clientInstance.validateUniqueFields(tableName, modifiedUniqueData, schema, data.id);
+              }
+            }
+          }
         }
 
         const fields = Object.keys(schema.fields);
@@ -797,6 +873,27 @@ export class CassandraClient {
         return result.rows.map(
           (row: any) => new Model(row as Partial<T>),
         );
+      }
+
+      static async create(data: Partial<T>): Promise<T> {
+        const tableName = schema.options?.table_name || name;
+        
+        // Validação automática de campos únicos
+        if (schema.unique && schema.unique.length > 0) {
+          await clientInstance.validateUniqueFields(tableName, data, schema);
+        }
+        
+        const fields = Object.keys(data);
+        const placeholders = fields.map(() => '?').join(', ');
+        const values = Object.values(data);
+        
+        const query = `INSERT INTO ${keyspace ? `"${keyspace}".` : ""}"${name}" (${fields.map(f => `"${f}"`).join(', ')}) VALUES (${placeholders})`;
+        await client.execute(query, values);
+        
+        const instance = new this(data);
+        instance._isNew = false;
+        instance._modified = {};
+        return instance as unknown as T;
       }
 
       static async findOne(

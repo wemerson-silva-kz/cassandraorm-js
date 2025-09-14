@@ -1,17 +1,14 @@
 import type { Client } from "cassandra-driver";
+import type { ModelSchema } from "../core/types.js";
 
 export interface RelationDefinition {
   model: string;
   foreignKey: string;
-  type: 'hasOne' | 'hasMany' | 'belongsTo';
   localKey?: string;
+  type: 'hasOne' | 'hasMany' | 'belongsTo' | 'belongsToMany';
   through?: string; // For many-to-many
-}
-
-export interface RelationsConfig {
-  enabled?: boolean;
-  cacheResults?: boolean;
-  maxDepth?: number;
+  pivotKeys?: { local: string; foreign: string }; // For many-to-many
+  as?: string; // Alias for the relation
 }
 
 export interface PopulateOptions {
@@ -19,13 +16,22 @@ export interface PopulateOptions {
   where?: Record<string, any>;
   limit?: number;
   orderBy?: { field: string; direction: 'ASC' | 'DESC' };
+  nested?: Record<string, PopulateOptions>; // Nested population
+}
+
+export interface RelationsConfig {
+  enabled?: boolean;
+  cacheResults?: boolean;
+  maxDepth?: number;
+  lazyLoading?: boolean;
 }
 
 export class RelationsManager {
   private client: Client;
   private keyspace: string;
   private config: RelationsConfig;
-  private modelRegistry = new Map<string, any>();
+  private modelRegistry = new Map<string, { schema: ModelSchema; relations: Record<string, RelationDefinition> }>();
+  private cache = new Map<string, any>();
 
   constructor(client: Client, keyspace: string, config: RelationsConfig = {}) {
     this.client = client;
@@ -34,210 +40,311 @@ export class RelationsManager {
       enabled: true,
       cacheResults: false,
       maxDepth: 3,
+      lazyLoading: true,
       ...config
     };
   }
 
-  registerModel(name: string, schema: any): void {
-    this.modelRegistry.set(name, schema);
+  registerModel(name: string, schema: ModelSchema, relations: Record<string, RelationDefinition> = {}): void {
+    this.modelRegistry.set(name, { schema, relations });
   }
 
+  // Populate relations for records
   async populate<T>(
     modelName: string,
     records: T[],
     relations: string | string[],
     options: Record<string, PopulateOptions> = {}
   ): Promise<T[]> {
-    if (!this.config.enabled || !records.length) {
-      return records;
-    }
+    if (!this.config.enabled || !records.length) return records;
 
     const relationNames = Array.isArray(relations) ? relations : [relations];
-    const schema = this.modelRegistry.get(modelName);
+    const modelInfo = this.modelRegistry.get(modelName);
     
-    if (!schema?.relations) {
-      return records;
+    if (!modelInfo) {
+      throw new Error(`Model ${modelName} not registered`);
     }
-
-    const populatedRecords = [...records];
 
     for (const relationName of relationNames) {
-      const relation = schema.relations[relationName];
-      if (!relation) continue;
+      const relation = modelInfo.relations[relationName];
+      if (!relation) {
+        console.warn(`Relation ${relationName} not found for model ${modelName}`);
+        continue;
+      }
 
-      await this.populateRelation(
-        populatedRecords,
-        relationName,
-        relation,
-        options[relationName] || {}
-      );
+      const populateOptions = options[relationName] || {};
+      await this.populateRelation(records, relation, relationName, populateOptions);
     }
 
-    return populatedRecords;
+    return records;
   }
 
   private async populateRelation<T>(
     records: T[],
-    relationName: string,
     relation: RelationDefinition,
+    relationName: string,
     options: PopulateOptions
   ): Promise<void> {
-    const localKey = relation.localKey || 'id';
-    const foreignKey = relation.foreignKey;
+    const cacheKey = this.getCacheKey(relation, records, options);
     
-    // Extract foreign key values
-    const foreignKeyValues = records
-      .map(record => (record as any)[localKey])
-      .filter(Boolean);
-
-    if (!foreignKeyValues.length) return;
-
-    // Build query for related records
-    let query = `SELECT ${options.select?.join(', ') || '*'} FROM ${this.keyspace}.${relation.model}`;
-    const params: any[] = [];
-
-    // Add WHERE clause
-    const whereConditions = [`${foreignKey} IN ?`];
-    params.push(foreignKeyValues);
-
-    if (options.where) {
-      Object.entries(options.where).forEach(([key, value]) => {
-        whereConditions.push(`${key} = ?`);
-        params.push(value);
-      });
+    if (this.config.cacheResults && this.cache.has(cacheKey)) {
+      const cachedData = this.cache.get(cacheKey);
+      this.attachRelationData(records, cachedData, relationName, relation.type);
+      return;
     }
 
-    query += ` WHERE ${whereConditions.join(' AND ')}`;
+    let relatedData: any[];
+
+    switch (relation.type) {
+      case 'hasOne':
+        relatedData = await this.loadHasOneRelation(records, relation, options);
+        break;
+      case 'hasMany':
+        relatedData = await this.loadHasManyRelation(records, relation, options);
+        break;
+      case 'belongsTo':
+        relatedData = await this.loadBelongsToRelation(records, relation, options);
+        break;
+      case 'belongsToMany':
+        relatedData = await this.loadBelongsToManyRelation(records, relation, options);
+        break;
+      default:
+        throw new Error(`Unknown relation type: ${relation.type}`);
+    }
+
+    if (this.config.cacheResults) {
+      this.cache.set(cacheKey, relatedData);
+    }
+
+    this.attachRelationData(records, relatedData, relationName, relation.type);
+
+    // Handle nested population
+    if (options.nested) {
+      for (const [nestedRelation, nestedOptions] of Object.entries(options.nested)) {
+        await this.populate(relation.model, relatedData, nestedRelation, { [nestedRelation]: nestedOptions });
+      }
+    }
+  }
+
+  private async loadHasOneRelation<T>(
+    records: T[],
+    relation: RelationDefinition,
+    options: PopulateOptions
+  ): Promise<any[]> {
+    const localKey = relation.localKey || 'id';
+    const foreignKey = relation.foreignKey;
+    const localValues = records.map(record => (record as any)[localKey]).filter(Boolean);
+
+    if (!localValues.length) return [];
+
+    const query = this.buildRelationQuery(relation.model, foreignKey, localValues, options);
+    const result = await this.client.execute(query.cql, query.params);
+    
+    return result.rows;
+  }
+
+  private async loadHasManyRelation<T>(
+    records: T[],
+    relation: RelationDefinition,
+    options: PopulateOptions
+  ): Promise<any[]> {
+    const localKey = relation.localKey || 'id';
+    const foreignKey = relation.foreignKey;
+    const localValues = records.map(record => (record as any)[localKey]).filter(Boolean);
+
+    if (!localValues.length) return [];
+
+    const query = this.buildRelationQuery(relation.model, foreignKey, localValues, options);
+    const result = await this.client.execute(query.cql, query.params);
+    
+    return result.rows;
+  }
+
+  private async loadBelongsToRelation<T>(
+    records: T[],
+    relation: RelationDefinition,
+    options: PopulateOptions
+  ): Promise<any[]> {
+    const foreignKey = relation.foreignKey;
+    const localKey = relation.localKey || 'id';
+    const foreignValues = records.map(record => (record as any)[foreignKey]).filter(Boolean);
+
+    if (!foreignValues.length) return [];
+
+    const query = this.buildRelationQuery(relation.model, localKey, foreignValues, options);
+    const result = await this.client.execute(query.cql, query.params);
+    
+    return result.rows;
+  }
+
+  private async loadBelongsToManyRelation<T>(
+    records: T[],
+    relation: RelationDefinition,
+    options: PopulateOptions
+  ): Promise<any[]> {
+    if (!relation.through || !relation.pivotKeys) {
+      throw new Error('belongsToMany relation requires through table and pivotKeys');
+    }
+
+    const localKey = relation.localKey || 'id';
+    const localValues = records.map(record => (record as any)[localKey]).filter(Boolean);
+
+    if (!localValues.length) return [];
+
+    // First, get pivot data
+    const pivotQuery = `
+      SELECT ${relation.pivotKeys.local}, ${relation.pivotKeys.foreign}
+      FROM ${this.getTableName(relation.through)}
+      WHERE ${relation.pivotKeys.local} IN (${localValues.map(() => '?').join(', ')})
+    `;
+    
+    const pivotResult = await this.client.execute(pivotQuery, localValues);
+    const foreignValues = pivotResult.rows.map(row => row[relation.pivotKeys!.foreign]);
+
+    if (!foreignValues.length) return [];
+
+    // Then get related records
+    const query = this.buildRelationQuery(relation.model, 'id', foreignValues, options);
+    const result = await this.client.execute(query.cql, query.params);
+    
+    // Attach pivot data to results
+    const pivotMap = new Map();
+    pivotResult.rows.forEach(pivot => {
+      const localId = pivot[relation.pivotKeys!.local];
+      const foreignId = pivot[relation.pivotKeys!.foreign];
+      
+      if (!pivotMap.has(localId)) {
+        pivotMap.set(localId, []);
+      }
+      pivotMap.get(localId).push(foreignId);
+    });
+
+    result.rows.forEach(row => {
+      row._pivot = pivotMap;
+    });
+
+    return result.rows;
+  }
+
+  private buildRelationQuery(
+    modelName: string,
+    keyField: string,
+    values: any[],
+    options: PopulateOptions
+  ): { cql: string; params: any[] } {
+    const select = options.select ? options.select.join(', ') : '*';
+    const tableName = this.getTableName(modelName.toLowerCase());
+    
+    let cql = `SELECT ${select} FROM ${tableName} WHERE ${keyField} IN (${values.map(() => '?').join(', ')})`;
+    let params = [...values];
+
+    // Add WHERE conditions
+    if (options.where) {
+      const whereConditions = Object.entries(options.where).map(([field, value]) => `${field} = ?`);
+      cql += ` AND ${whereConditions.join(' AND ')}`;
+      params.push(...Object.values(options.where));
+    }
 
     // Add ORDER BY
     if (options.orderBy) {
-      query += ` ORDER BY ${options.orderBy.field} ${options.orderBy.direction}`;
+      cql += ` ORDER BY ${options.orderBy.field} ${options.orderBy.direction}`;
     }
 
     // Add LIMIT
     if (options.limit) {
-      query += ` LIMIT ${options.limit}`;
+      cql += ` LIMIT ${options.limit}`;
     }
 
-    query += ' ALLOW FILTERING';
+    cql += ' ALLOW FILTERING';
 
-    // Execute query
-    const result = await this.client.execute(query, params, { prepare: true });
-    const relatedRecords = result.rows;
+    return { cql, params };
+  }
 
-    // Group related records by foreign key
-    const relatedByKey = new Map<any, any[]>();
-    relatedRecords.forEach(record => {
-      const key = record[foreignKey];
-      if (!relatedByKey.has(key)) {
-        relatedByKey.set(key, []);
-      }
-      relatedByKey.get(key)!.push(record);
-    });
+  private attachRelationData<T>(
+    records: T[],
+    relatedData: any[],
+    relationName: string,
+    relationType: RelationDefinition['type']
+  ): void {
+    const relatedMap = new Map();
 
-    // Attach related records to main records
-    records.forEach(record => {
-      const key = (record as any)[localKey];
-      const related = relatedByKey.get(key) || [];
-
-      if (relation.type === 'hasOne') {
-        (record as any)[relationName] = related[0] || null;
+    // Group related data by foreign key
+    relatedData.forEach(related => {
+      const key = this.getRelationKey(related, relationType);
+      
+      if (relationType === 'hasMany' || relationType === 'belongsToMany') {
+        if (!relatedMap.has(key)) {
+          relatedMap.set(key, []);
+        }
+        relatedMap.get(key).push(related);
       } else {
-        (record as any)[relationName] = related;
+        relatedMap.set(key, related);
       }
+    });
+
+    // Attach to records
+    records.forEach(record => {
+      const localKey = this.getLocalKey(record as any, relationType);
+      const relatedValue = relatedMap.get(localKey);
+      
+      (record as any)[relationName] = relatedValue || (relationType === 'hasMany' || relationType === 'belongsToMany' ? [] : null);
     });
   }
 
-  async createRelation(
-    fromModel: string,
-    fromId: any,
-    toModel: string,
-    toId: any,
-    relationName: string
-  ): Promise<void> {
-    const fromSchema = this.modelRegistry.get(fromModel);
-    const relation = fromSchema?.relations?.[relationName];
-    
-    if (!relation) {
-      throw new Error(`Relation ${relationName} not found in ${fromModel}`);
-    }
-
-    if (relation.through) {
-      // Many-to-many relationship
-      await this.client.execute(
-        `INSERT INTO ${this.keyspace}.${relation.through} (${relation.foreignKey}, ${relation.localKey || 'id'}) VALUES (?, ?)`,
-        [fromId, toId],
-        { prepare: true }
-      );
-    } else {
-      // Update foreign key in related model
-      await this.client.execute(
-        `UPDATE ${this.keyspace}.${toModel} SET ${relation.foreignKey} = ? WHERE id = ?`,
-        [fromId, toId],
-        { prepare: true }
-      );
-    }
+  private getRelationKey(related: any, relationType: RelationDefinition['type']): any {
+    // This is simplified - in practice, you'd need to track the foreign key field
+    return related.id || related.user_id || Object.values(related)[0];
   }
 
-  async removeRelation(
-    fromModel: string,
-    fromId: any,
-    toModel: string,
-    toId: any,
-    relationName: string
-  ): Promise<void> {
-    const fromSchema = this.modelRegistry.get(fromModel);
-    const relation = fromSchema?.relations?.[relationName];
-    
-    if (!relation) {
-      throw new Error(`Relation ${relationName} not found in ${fromModel}`);
-    }
-
-    if (relation.through) {
-      // Many-to-many relationship
-      await this.client.execute(
-        `DELETE FROM ${this.keyspace}.${relation.through} WHERE ${relation.foreignKey} = ? AND ${relation.localKey || 'id'} = ?`,
-        [fromId, toId],
-        { prepare: true }
-      );
-    } else {
-      // Remove foreign key from related model
-      await this.client.execute(
-        `UPDATE ${this.keyspace}.${toModel} SET ${relation.foreignKey} = null WHERE id = ?`,
-        [toId],
-        { prepare: true }
-      );
-    }
+  private getLocalKey(record: any, relationType: RelationDefinition['type']): any {
+    return record.id;
   }
 
-  // Helper method to create denormalized data
-  async denormalize<T>(
+  private getTableName(tableName: string): string {
+    return this.keyspace ? `"${this.keyspace}"."${tableName}"` : `"${tableName}"`;
+  }
+
+  private getCacheKey(relation: RelationDefinition, records: any[], options: PopulateOptions): string {
+    const recordIds = records.map(r => r.id).sort().join(',');
+    const optionsStr = JSON.stringify(options);
+    return `${relation.model}:${relation.type}:${recordIds}:${optionsStr}`;
+  }
+
+  // Lazy loading methods
+  createLazyLoader<T>(
     record: T,
-    relations: string[],
-    targetTable: string
-  ): Promise<void> {
-    const denormalizedData = { ...record };
+    relationName: string,
+    relation: RelationDefinition
+  ): () => Promise<any> {
+    return async () => {
+      if ((record as any)[`_${relationName}_loaded`]) {
+        return (record as any)[relationName];
+      }
 
-    // Populate relations
-    const populated = await this.populate(
-      targetTable,
-      [record],
-      relations
-    );
+      const result = await this.populate(
+        record.constructor.name,
+        [record],
+        relationName
+      );
 
-    if (populated.length > 0) {
-      Object.assign(denormalizedData, populated[0]);
-    }
+      (record as any)[`_${relationName}_loaded`] = true;
+      return (record as any)[relationName];
+    };
+  }
 
-    // Store denormalized data
-    const fields = Object.keys(denormalizedData);
-    const values = Object.values(denormalizedData);
-    const placeholders = fields.map(() => '?').join(', ');
+  // Clear cache
+  clearCache(): void {
+    this.cache.clear();
+  }
 
-    await this.client.execute(
-      `INSERT INTO ${this.keyspace}.${targetTable}_denormalized (${fields.join(', ')}) VALUES (${placeholders})`,
-      values,
-      { prepare: true }
-    );
+  // Get relation definition
+  getRelation(modelName: string, relationName: string): RelationDefinition | undefined {
+    const modelInfo = this.modelRegistry.get(modelName);
+    return modelInfo?.relations[relationName];
+  }
+
+  // Check if relation exists
+  hasRelation(modelName: string, relationName: string): boolean {
+    return !!this.getRelation(modelName, relationName);
   }
 }

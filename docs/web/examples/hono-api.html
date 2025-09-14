@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hono API Example - CassandraORM JS</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-database"></i>
+                <a href="../index.html" style="color: white; text-decoration: none;">
+                    <span>CassandraORM JS</span>
+                </a>
+                <span class="version">v1.0.3</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="../index.html">← Back to Docs</a></li>
+                <li><a href="https://github.com/wemerson-silva-kz/cassandraorm-js" target="_blank">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main style="padding-top: 80px;">
+        <section class="hero" style="padding: 60px 0;">
+            <div class="hero-content">
+                <h1><i class="fas fa-crown"></i> Hono API</h1>
+                <p class="hero-subtitle">Edge-Compatible API with Hono Framework</p>
+                <p class="hero-description">
+                    Build ultra-lightweight APIs that run everywhere: Node.js, Bun, Deno, 
+                    Cloudflare Workers, and more with CassandraORM.
+                </p>
+            </div>
+        </section>
+
+        <section class="container" style="padding: 40px 20px;">
+            <div class="example-content">
+                <h2>👑 Edge-Compatible Hono API</h2>
+                
+                <div class="example-tabs">
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" data-tab="setup">Setup</button>
+                        <button class="tab-btn" data-tab="models">Models</button>
+                        <button class="tab-btn" data-tab="routes">Routes</button>
+                        <button class="tab-btn" data-tab="server">Server</button>
+                        <button class="tab-btn" data-tab="deploy">Deploy</button>
+                    </div>
+
+                    <!-- Setup Tab -->
+                    <div class="tab-content active" id="setup">
+                        <h3>🚀 Project Setup</h3>
+                        
+                        <h4>Install with Multiple Runtimes</h4>
+                        <pre><code class="language-bash"># With npm
+npm create hono@latest hono-cassandra-api
+cd hono-cassandra-api
+npm install cassandraorm-js @hono/zod-validator zod bcryptjs
+
+# With bun (recommended)
+bun create hono hono-cassandra-api
+cd hono-cassandra-api
+bun add cassandraorm-js @hono/zod-validator zod bcryptjs
+
+# With pnpm
+pnpm create hono hono-cassandra-api
+cd hono-cassandra-api
+pnpm add cassandraorm-js @hono/zod-validator zod bcryptjs</code></pre>
+
+                        <h4>Package.json</h4>
+                        <pre><code class="language-json">{
+  "name": "hono-cassandra-api",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir dist",
+    "deploy:cloudflare": "wrangler deploy",
+    "deploy:vercel": "vercel deploy"
+  },
+  "dependencies": {
+    "hono": "^3.12.0",
+    "cassandraorm-js": "^1.0.3",
+    "@hono/zod-validator": "^0.2.0",
+    "zod": "^3.22.0",
+    "bcryptjs": "^2.4.3"
+  }
+}</code></pre>
+
+                        <h4>Environment Variables</h4>
+                        <pre><code class="language-bash"># .env
+# Cassandra Configuration
+CASSANDRA_HOSTS=127.0.0.1
+CASSANDRA_DATACENTER=datacenter1
+CASSANDRA_KEYSPACE=hono_api
+
+# JWT Secret
+JWT_SECRET=your-super-secret-jwt-key
+
+# Runtime Environment
+RUNTIME=node # node | bun | deno | cloudflare</code></pre>
+                    </div>
+
+                    <!-- Models Tab -->
+                    <div class="tab-content" id="models">
+                        <h3>📊 Edge-Compatible Models</h3>
+                        
+                        <h4>src/models/schemas.ts</h4>
+                        <pre><code class="language-typescript">import { ModelSchema } from 'cassandraorm-js';
+import { z } from 'zod';
+
+// Zod schemas for validation
+export const CreateUserSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(2).max(100),
+  password: z.string().min(6),
+  role: z.enum(['user', 'admin']).optional()
+});
+
+export const UpdateUserSchema = z.object({
+  email: z.string().email().optional(),
+  name: z.string().min(2).max(100).optional(),
+  status: z.enum(['active', 'inactive']).optional()
+});
+
+export const CreatePostSchema = z.object({
+  title: z.string().min(5).max(200),
+  content: z.string().min(10),
+  user_id: z.string().uuid(),
+  tags: z.array(z.string()).optional(),
+  published: z.boolean().optional()
+});
+
+// CassandraORM schemas with edge compatibility
+export const userSchema: ModelSchema = {
+  fields: {
+    id: 'uuid',
+    email: 'text',
+    name: 'text',
+    password: 'text',
+    status: 'text',
+    role: 'text',
+    created_at: 'timestamp',
+    updated_at: 'timestamp',
+    deleted_at: 'timestamp'
+  },
+  key: ['id'],
+  unique: ['email'], // ✅ Works in all runtimes
+  
+  // ✅ Edge-compatible hooks
+  hooks: {
+    beforeSave: (data: any) => {
+      data.updated_at = new Date();
+      if (!data.created_at) data.created_at = new Date();
+      if (!data.status) data.status = 'active';
+      if (!data.role) data.role = 'user';
+      return data;
+    },
+    
+    afterFind: (data: any) => {
+      // Remove password in all runtimes
+      if (Array.isArray(data)) {
+        return data.map(({ password, ...user }) => user);
+      }
+      const { password, ...user } = data;
+      return user;
+    }
+  },
+  
+  // ✅ Runtime-agnostic scopes
+  scopes: {
+    active: () => ({ status: 'active' }),
+    recent: (days: number = 30) => ({
+      created_at: { 
+        $gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) 
+      }
+    })
+  },
+  
+  // ✅ Serialization for edge
+  options: {
+    hidden: ['password'],
+    casts: {
+      created_at: 'date'
+    }
+  }
+};
+
+export const postSchema: ModelSchema = {
+  fields: {
+    id: 'timeuuid',
+    user_id: 'uuid',
+    title: 'text',
+    content: 'text',
+    slug: 'text',
+    published: 'boolean',
+    created_at: 'timestamp',
+    updated_at: 'timestamp'
+  },
+  key: ['user_id', 'id'],
+  unique: ['slug'],
+  
+  hooks: {
+    beforeSave: (data: any) => {
+      data.updated_at = new Date();
+      if (!data.created_at) data.created_at = new Date();
+      
+      // Generate URL-friendly slug
+      if (data.title && !data.slug) {
+        data.slug = data.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+      }
+      
+      return data;
+    }
+  },
+  
+  scopes: {
+    published: () => ({ published: true }),
+    byUser: (userId: string) => ({ user_id: userId })
+  }
+};</code></pre>
+                    </div>
+
+                    <!-- Routes Tab -->
+                    <div class="tab-content" id="routes">
+                        <h3>🛣️ Hono Routes</h3>
+                        
+                        <h4>src/routes/users.ts</h4>
+                        <pre><code class="language-typescript">import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { uuid } from 'cassandraorm-js';
+import { CreateUserSchema, UpdateUserSchema } from '../models/schemas';
+import type { Variables } from '../types';
+
+const users = new Hono<{ Variables: Variables }>();
+
+// GET /users - List users with scopes
+users.get('/', async (c) => {
+  try {
+    const { status, role, recent, page = '1', limit = '10' } = c.req.query();
+    
+    let query = c.get('User').query();
+    
+    // Apply scopes
+    if (status) query = query.scope('active');
+    if (role) query = query.scope('byRole', role);
+    if (recent) query = query.scope('recent', parseInt(recent));
+    
+    const users = await query
+      .limit(parseInt(limit))
+      .offset((parseInt(page) - 1) * parseInt(limit))
+      .get();
+    
+    return c.json({
+      success: true,
+      data: users
+    });
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: error.message
+    }, 500);
+  }
+});
+
+// GET /users/:id - Get user by ID
+users.get('/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const include = c.req.query('include');
+    
+    let query = c.get('User').where('id', id);
+    
+    if (include) {
+      const relations = include.split(',');
+      query = query.with(relations);
+    }
+    
+    const user = await query.first();
+    
+    if (!user) {
+      return c.json({
+        success: false,
+        error: 'User not found'
+      }, 404);
+    }
+    
+    return c.json({
+      success: true,
+      data: user
+    });
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: error.message
+    }, 500);
+  }
+});
+
+// POST /users - Create user with Zod validation
+users.post('/', 
+  zValidator('json', CreateUserSchema),
+  async (c) => {
+    try {
+      const { email, name, password, role = 'user' } = c.req.valid('json');
+      
+      // Hash password (edge-compatible)
+      const bcrypt = await import('bcryptjs');
+      const hashedPassword = await bcrypt.hash(password, 12);
+      
+      const user = new (c.get('User'))({
+        id: uuid(),
+        email,
+        name,
+        password: hashedPassword,
+        role
+      });
+      
+      await user.save(); // ✅ All CassandraORM features
+      
+      return c.json({
+        success: true,
+        data: user.toJSON()
+      }, 201);
+    } catch (error: any) {
+      if (error.message.includes('already exists')) {
+        return c.json({
+          success: false,
+          error: 'Email already exists'
+        }, 409);
+      }
+      
+      return c.json({
+        success: false,
+        error: error.message
+      }, 500);
+    }
+  }
+);
+
+// PUT /users/:id - Update user
+users.put('/:id',
+  zValidator('json', UpdateUserSchema),
+  async (c) => {
+    try {
+      const id = c.req.param('id');
+      const updateData = c.req.valid('json');
+      
+      const user = await c.get('User').find(id);
+      if (!user) {
+        return c.json({
+          success: false,
+          error: 'User not found'
+        }, 404);
+      }
+      
+      Object.assign(user, updateData);
+      await user.save(); // ✅ Automatic validation
+      
+      return c.json({
+        success: true,
+        data: user.toJSON()
+      });
+    } catch (error: any) {
+      return c.json({
+        success: false,
+        error: error.message
+      }, 500);
+    }
+  }
+);
+
+// DELETE /users/:id - Soft delete
+users.delete('/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const user = await c.get('User').find(id);
+    
+    if (!user) {
+      return c.json({
+        success: false,
+        error: 'User not found'
+      }, 404);
+    }
+    
+    await user.softDelete(); // ✅ Soft delete
+    
+    return c.json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: error.message
+    }, 500);
+  }
+});
+
+export default users;</code></pre>
+                    </div>
+
+                    <!-- Server Tab -->
+                    <div class="tab-content" id="server">
+                        <h3>👑 Hono Server</h3>
+                        
+                        <h4>src/index.ts</h4>
+                        <pre><code class="language-typescript">import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { logger } from 'hono/logger';
+import { prettyJSON } from 'hono/pretty-json';
+import { createClient } from 'cassandraorm-js';
+import { userSchema, postSchema } from './models/schemas';
+import users from './routes/users';
+import posts from './routes/posts';
+
+// Types for Hono context
+type Variables = {
+  client: any;
+  User: any;
+  Post: any;
+};
+
+const app = new Hono<{ Variables: Variables }>();
+
+// Middleware
+app.use('*', logger());
+app.use('*', prettyJSON());
+app.use('*', cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://yourdomain.com'] 
+    : '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Database initialization middleware
+app.use('*', async (c, next) => {
+  if (!c.get('client')) {
+    try {
+      const client = createClient({
+        clientOptions: {
+          contactPoints: [process.env.CASSANDRA_HOSTS || '127.0.0.1'],
+          localDataCenter: process.env.CASSANDRA_DATACENTER || 'datacenter1',
+          keyspace: process.env.CASSANDRA_KEYSPACE || 'hono_api'
+        },
+        ormOptions: {
+          createKeyspace: true,
+          migration: 'safe'
+        }
+      });
+
+      await client.connect();
+      
+      // Load models with all features
+      const User = await client.loadSchema('users', userSchema);
+      const Post = await client.loadSchema('posts', postSchema);
+
+      // Set in context
+      c.set('client', client);
+      c.set('User', User);
+      c.set('Post', Post);
+      
+      console.log('✅ CassandraORM initialized for Hono');
+    } catch (error: any) {
+      return c.json({
+        success: false,
+        error: 'Database connection failed',
+        details: error.message
+      }, 500);
+    }
+  }
+  
+  await next();
+});
+
+// Health check
+app.get('/health', (c) => {
+  return c.json({
+    success: true,
+    message: 'Hono + CassandraORM API is running',
+    runtime: process.env.RUNTIME || 'unknown',
+    timestamp: new Date().toISOString(),
+    features: [
+      'Edge Compatible',
+      'Multi-runtime Support',
+      'Query Builder Advanced',
+      'Relationships',
+      'Hooks & Events',
+      'Unique Validation',
+      'Scopes & Filters',
+      'Serialization',
+      'Soft Deletes',
+      'Ultra Lightweight'
+    ]
+  });
+});
+
+// API routes
+app.route('/api/users', users);
+app.route('/api/posts', posts);
+
+// 404 handler
+app.notFound((c) => {
+  return c.json({
+    success: false,
+    error: 'Route not found'
+  }, 404);
+});
+
+// Error handler
+app.onError((err, c) => {
+  console.error('Hono Error:', err);
+  
+  if (err.message.includes('already exists')) {
+    return c.json({
+      success: false,
+      error: 'Resource already exists'
+    }, 409);
+  }
+  
+  return c.json({
+    success: false,
+    error: process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : err.message
+  }, 500);
+});
+
+// Export for different runtimes
+export default {
+  port: process.env.PORT || 3000,
+  fetch: app.fetch,
+};
+
+// Start server (Node.js/Bun)
+if (import.meta.main) {
+  console.log(`
+👑 Hono + CassandraORM API Started!
+
+📍 Server: http://localhost:${process.env.PORT || 3000}
+🏥 Health: http://localhost:${process.env.PORT || 3000}/health
+👥 Users: http://localhost:${process.env.PORT || 3000}/api/users
+📝 Posts: http://localhost:${process.env.PORT || 3000}/api/posts
+
+✅ Edge Features:
+  🌐 Multi-runtime (Node.js, Bun, Deno, CF Workers)
+  🔍 Query Builder Advanced
+  🔗 Relationships
+  🎣 Hooks & Events
+  🔒 Unique Validation
+  🎯 Scopes & Filters
+  📄 Serialization
+  🗑️ Soft Deletes
+  ⚡ Ultra Performance
+  📦 Tiny Bundle Size
+  `);
+}</code></pre>
+
+                        <h4>Cloudflare Workers Deployment</h4>
+                        <pre><code class="language-typescript">// wrangler.toml
+name = "hono-cassandra-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[env.production.vars]
+CASSANDRA_HOSTS = "your-cassandra-host.com"
+CASSANDRA_KEYSPACE = "production_api"
+JWT_SECRET = "your-production-jwt-secret"</code></pre>
+                    </div>
+
+                    <!-- Deploy Tab -->
+                    <div class="tab-content" id="deploy">
+                        <h3>🚀 Multi-Runtime Deployment</h3>
+                        
+                        <h4>Deploy to Cloudflare Workers</h4>
+                        <pre><code class="language-bash"># Install Wrangler CLI
+npm install -g wrangler
+
+# Login to Cloudflare
+wrangler login
+
+# Deploy to Cloudflare Workers
+wrangler deploy
+
+# Your API is now available at:
+# https://hono-cassandra-api.your-subdomain.workers.dev</code></pre>
+
+                        <h4>Deploy to Vercel</h4>
+                        <pre><code class="language-bash"># Install Vercel CLI
+npm install -g vercel
+
+# Deploy to Vercel
+vercel deploy
+
+# Your API is now available at:
+# https://hono-cassandra-api.vercel.app</code></pre>
+
+                        <h4>Deploy to Railway</h4>
+                        <pre><code class="language-bash"># Install Railway CLI
+npm install -g @railway/cli
+
+# Login and deploy
+railway login
+railway deploy
+
+# Your API is now available at:
+# https://your-app.railway.app</code></pre>
+
+                        <h4>Run with Different Runtimes</h4>
+                        <pre><code class="language-bash"># Node.js
+node src/index.ts
+
+# Bun (recommended for performance)
+bun run src/index.ts
+
+# Deno
+deno run --allow-net --allow-env src/index.ts
+
+# Test the API
+curl http://localhost:3000/health
+
+# Create user
+curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Edge User",
+    "email": "edge@hono.com",
+    "password": "secret123"
+  }'</code></pre>
+                    </div>
+                </div>
+
+                <div class="example-features">
+                    <h3>👑 Hono + CassandraORM Features</h3>
+                    <div class="features-grid">
+                        <div class="feature-item">
+                            <div class="feature-icon">🌐</div>
+                            <div class="feature-content">
+                                <h4>Multi-Runtime</h4>
+                                <p>Runs on Node.js, Bun, Deno, Cloudflare Workers</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">⚡</div>
+                            <div class="feature-content">
+                                <h4>Ultra Performance</h4>
+                                <p>Fastest JavaScript web framework + optimized ORM</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">📦</div>
+                            <div class="feature-content">
+                                <h4>Tiny Bundle</h4>
+                                <p>Minimal footprint perfect for edge deployment</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🔒</div>
+                            <div class="feature-content">
+                                <h4>Type Safety</h4>
+                                <p>End-to-end TypeScript with Zod validation</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🌍</div>
+                            <div class="feature-content">
+                                <h4>Edge Ready</h4>
+                                <p>Deploy to Cloudflare Workers, Vercel Edge</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🎯</div>
+                            <div class="feature-content">
+                                <h4>All ORM Features</h4>
+                                <p>Complete CassandraORM functionality in edge</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="../js/main.js"></script>
+</body>
+</html>

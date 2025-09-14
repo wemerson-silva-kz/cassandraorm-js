@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elysia.js API Example - CassandraORM JS</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-database"></i>
+                <a href="../index.html" style="color: white; text-decoration: none;">
+                    <span>CassandraORM JS</span>
+                </a>
+                <span class="version">v1.0.3</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="../index.html">← Back to Docs</a></li>
+                <li><a href="https://github.com/wemerson-silva-kz/cassandraorm-js" target="_blank">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main style="padding-top: 80px;">
+        <section class="hero" style="padding: 60px 0;">
+            <div class="hero-content">
+                <h1><i class="fas fa-rocket"></i> Elysia.js API</h1>
+                <p class="hero-subtitle">High-Performance API with Elysia.js and TypeScript</p>
+                <p class="hero-description">
+                    Build ultra-fast APIs with Elysia.js and CassandraORM featuring
+                    type safety, validation, and all advanced ORM features.
+                </p>
+            </div>
+        </section>
+
+        <section class="container" style="padding: 40px 20px;">
+            <div class="example-content">
+                <h2>⚡ High-Performance Elysia.js API</h2>
+                
+                <div class="example-tabs">
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" data-tab="setup">Setup</button>
+                        <button class="tab-btn" data-tab="types">Types</button>
+                        <button class="tab-btn" data-tab="models">Models</button>
+                        <button class="tab-btn" data-tab="routes">Routes</button>
+                        <button class="tab-btn" data-tab="server">Server</button>
+                    </div>
+
+                    <!-- Setup Tab -->
+                    <div class="tab-content active" id="setup">
+                        <h3>🚀 Project Setup</h3>
+                        
+                        <h4>Install with Bun (Recommended)</h4>
+                        <pre><code class="language-bash"># Create new project
+mkdir elysia-cassandra-api
+cd elysia-cassandra-api
+
+# Initialize with Bun
+bun init
+
+# Install dependencies
+bun add elysia
+bun add cassandraorm-js
+bun add @elysiajs/cors @elysiajs/swagger @elysiajs/jwt
+bun add bcryptjs
+
+# Install dev dependencies
+bun add -d @types/bcryptjs</code></pre>
+
+                        <h4>Package.json</h4>
+                        <pre><code class="language-json">{
+  "name": "elysia-cassandra-api",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "bun run src/server.ts",
+    "dev": "bun --watch src/server.ts",
+    "build": "bun build src/server.ts --outdir dist",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "elysia": "^0.8.0",
+    "cassandraorm-js": "^1.0.3",
+    "@elysiajs/cors": "^0.8.0",
+    "@elysiajs/swagger": "^0.8.0",
+    "@elysiajs/jwt": "^0.8.0",
+    "bcryptjs": "^2.4.3"
+  }
+}</code></pre>
+
+                        <h4>Environment Configuration</h4>
+                        <pre><code class="language-bash"># .env
+PORT=3000
+NODE_ENV=development
+
+# Cassandra
+CASSANDRA_HOSTS=127.0.0.1
+CASSANDRA_DATACENTER=datacenter1
+CASSANDRA_KEYSPACE=elysia_api
+
+# JWT
+JWT_SECRET=your-super-secret-jwt-key</code></pre>
+                    </div>
+
+                    <!-- Types Tab -->
+                    <div class="tab-content" id="types">
+                        <h3>📝 TypeScript Types</h3>
+                        
+                        <h4>src/types/index.ts</h4>
+                        <pre><code class="language-typescript">// API Response Types
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+// User Types
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  avatar_url?: string;
+  status: 'active' | 'inactive';
+  role: 'user' | 'admin';
+  profile_data?: Record<string, any>;
+  created_at: Date;
+  updated_at: Date;
+  deleted_at?: Date;
+}
+
+export interface CreateUserRequest {
+  email: string;
+  name: string;
+  password: string;
+  role?: 'user' | 'admin';
+}
+
+export interface UpdateUserRequest {
+  email?: string;
+  name?: string;
+  avatar_url?: string;
+  status?: 'active' | 'inactive';
+}
+
+// Post Types
+export interface Post {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  slug: string;
+  published: boolean;
+  tags: Set<string>;
+  view_count: number;
+  created_at: Date;
+  updated_at: Date;
+  deleted_at?: Date;
+  author?: User;
+}
+
+export interface CreatePostRequest {
+  title: string;
+  content: string;
+  user_id: string;
+  tags?: string[];
+  published?: boolean;
+}
+
+export interface UpdatePostRequest {
+  title?: string;
+  content?: string;
+  published?: boolean;
+  tags?: string[];
+}
+
+// Query Parameters
+export interface UserQueryParams {
+  status?: 'active' | 'inactive';
+  role?: 'user' | 'admin';
+  recent?: number;
+  page?: number;
+  limit?: number;
+  include?: string;
+}
+
+export interface PostQueryParams {
+  published?: boolean;
+  user_id?: string;
+  recent?: number;
+  page?: number;
+  limit?: number;
+  include?: string;
+}</code></pre>
+                    </div>
+
+                    <!-- Models Tab -->
+                    <div class="tab-content" id="models">
+                        <h3>📊 CassandraORM Models</h3>
+                        
+                        <h4>src/models/User.ts</h4>
+                        <pre><code class="language-typescript">import { ModelSchema } from 'cassandraorm-js';
+import bcrypt from 'bcryptjs';
+
+export const userSchema: ModelSchema = {
+  fields: {
+    id: 'uuid',
+    email: 'text',
+    name: 'text',
+    password: 'text',
+    avatar_url: 'text',
+    status: 'text',
+    role: 'text',
+    profile_data: 'text',
+    created_at: 'timestamp',
+    updated_at: 'timestamp',
+    deleted_at: 'timestamp'
+  },
+  key: ['id'],
+  unique: ['email'], // ✅ Automatic unique validation
+  
+  // ✅ Hooks with TypeScript
+  hooks: {
+    beforeSave: async (data: any) => {
+      data.updated_at = new Date();
+      if (!data.created_at) data.created_at = new Date();
+      if (!data.status) data.status = 'active';
+      if (!data.role) data.role = 'user';
+      
+      // Hash password if provided
+      if (data.password && !data.password.startsWith('$2')) {
+        data.password = await bcrypt.hash(data.password, 12);
+      }
+      
+      return data;
+    },
+    
+    afterFind: (data: any) => {
+      // Remove password from responses
+      if (Array.isArray(data)) {
+        return data.map(user => {
+          const { password, ...safeUser } = user;
+          return safeUser;
+        });
+      } else {
+        const { password, ...safeUser } = data;
+        return safeUser;
+      }
+    }
+  },
+  
+  // ✅ Scopes
+  scopes: {
+    active: () => ({ status: 'active' }),
+    recent: (days: number = 30) => ({
+      created_at: { 
+        $gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) 
+      }
+    }),
+    byRole: (role: string) => ({ role })
+  },
+  
+  // ✅ Relationships
+  relations: {
+    posts: { 
+      model: 'Post', 
+      type: 'hasMany', 
+      foreignKey: 'user_id' 
+    }
+  },
+  
+  // ✅ Serialization
+  options: {
+    hidden: ['password'],
+    appends: ['posts_count'],
+    casts: {
+      profile_data: 'json',
+      created_at: 'date'
+    }
+  }
+};
+
+export const postSchema: ModelSchema = {
+  fields: {
+    id: 'timeuuid',
+    user_id: 'uuid',
+    title: 'text',
+    content: 'text',
+    slug: 'text',
+    published: 'boolean',
+    tags: 'set<text>',
+    view_count: 'counter',
+    created_at: 'timestamp',
+    updated_at: 'timestamp',
+    deleted_at: 'timestamp'
+  },
+  key: ['user_id', 'id'],
+  unique: ['slug'],
+  
+  hooks: {
+    beforeSave: (data: any) => {
+      data.updated_at = new Date();
+      if (!data.created_at) data.created_at = new Date();
+      if (data.published === undefined) data.published = false;
+      
+      // Generate slug
+      if (data.title && !data.slug) {
+        data.slug = data.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+      }
+      
+      return data;
+    }
+  },
+  
+  scopes: {
+    published: () => ({ published: true }),
+    byUser: (userId: string) => ({ user_id: userId }),
+    recent: (days: number = 7) => ({
+      created_at: { 
+        $gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) 
+      }
+    })
+  },
+  
+  relations: {
+    author: { 
+      model: 'User', 
+      type: 'belongsTo', 
+      foreignKey: 'user_id' 
+    }
+  }
+};</code></pre>
+                    </div>
+
+                    <!-- Routes Tab -->
+                    <div class="tab-content" id="routes">
+                        <h3>🛣️ Elysia Routes</h3>
+                        
+                        <h4>src/routes/users.ts</h4>
+                        <pre><code class="language-typescript">import { Elysia, t } from 'elysia';
+import { uuid } from 'cassandraorm-js';
+import type { 
+  ApiResponse, 
+  PaginatedResponse, 
+  User, 
+  CreateUserRequest, 
+  UpdateUserRequest,
+  UserQueryParams 
+} from '../types';
+
+export const usersRoute = (app: Elysia, models: any) => 
+  app.group('/users', (app) =>
+    app
+      // GET /api/users - List users with type-safe queries
+      .get('/', async ({ query }): Promise<PaginatedResponse<User>> => {
+        try {
+          const { 
+            status, 
+            role, 
+            recent, 
+            page = 1, 
+            limit = 10,
+            include 
+          } = query as UserQueryParams;
+          
+          // Build query with scopes
+          let userQuery = models.User.query();
+          
+          if (status) userQuery = userQuery.scope('active');
+          if (role) userQuery = userQuery.scope('byRole', role);
+          if (recent) userQuery = userQuery.scope('recent', parseInt(recent.toString()));
+          
+          // Include relationships
+          if (include) {
+            const relations = include.split(',');
+            userQuery = userQuery.with(relations);
+          }
+          
+          // Pagination
+          const offset = (page - 1) * limit;
+          const users = await userQuery
+            .limit(limit)
+            .offset(offset)
+            .get();
+          
+          const total = await models.User.count();
+          
+          return {
+            success: true,
+            data: users,
+            pagination: {
+              page,
+              limit,
+              total,
+              pages: Math.ceil(total / limit)
+            }
+          };
+        } catch (error: any) {
+          throw new Error(error.message);
+        }
+      }, {
+        query: t.Object({
+          status: t.Optional(t.Union([t.Literal('active'), t.Literal('inactive')])),
+          role: t.Optional(t.Union([t.Literal('user'), t.Literal('admin')])),
+          recent: t.Optional(t.Number()),
+          page: t.Optional(t.Number({ minimum: 1 })),
+          limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+          include: t.Optional(t.String())
+        })
+      })
+      
+      // GET /api/users/:id - Get user by ID
+      .get('/:id', async ({ params, query }): Promise<ApiResponse<User>> => {
+        try {
+          const { include } = query as { include?: string };
+          
+          let userQuery = models.User.where('id', params.id);
+          
+          if (include) {
+            const relations = include.split(',');
+            userQuery = userQuery.with(relations);
+          }
+          
+          const user = await userQuery.first();
+          
+          if (!user) {
+            throw new Error('User not found');
+          }
+          
+          return {
+            success: true,
+            data: user
+          };
+        } catch (error: any) {
+          throw new Error(error.message);
+        }
+      }, {
+        params: t.Object({
+          id: t.String({ format: 'uuid' })
+        }),
+        query: t.Object({
+          include: t.Optional(t.String())
+        })
+      })
+      
+      // POST /api/users - Create user with validation
+      .post('/', async ({ body }): Promise<ApiResponse<User>> => {
+        try {
+          const { email, name, password, role = 'user' } = body as CreateUserRequest;
+          
+          const user = new models.User({
+            id: uuid(),
+            email,
+            name,
+            password,
+            role
+          });
+          
+          await user.save(); // ✅ Automatic validation + hooks
+          
+          return {
+            success: true,
+            data: user.toJSON()
+          };
+        } catch (error: any) {
+          if (error.message.includes('already exists')) {
+            throw new Error('Email already exists');
+          }
+          throw new Error(error.message);
+        }
+      }, {
+        body: t.Object({
+          email: t.String({ format: 'email' }),
+          name: t.String({ minLength: 2, maxLength: 100 }),
+          password: t.String({ minLength: 6 }),
+          role: t.Optional(t.Union([t.Literal('user'), t.Literal('admin')]))
+        })
+      })
+      
+      // PUT /api/users/:id - Update user
+      .put('/:id', async ({ params, body }): Promise<ApiResponse<User>> => {
+        try {
+          const user = await models.User.find(params.id);
+          if (!user) {
+            throw new Error('User not found');
+          }
+          
+          Object.assign(user, body);
+          await user.save(); // ✅ Automatic validation
+          
+          return {
+            success: true,
+            data: user.toJSON()
+          };
+        } catch (error: any) {
+          if (error.message.includes('already exists')) {
+            throw new Error('Email already exists');
+          }
+          throw new Error(error.message);
+        }
+      }, {
+        params: t.Object({
+          id: t.String({ format: 'uuid' })
+        }),
+        body: t.Object({
+          email: t.Optional(t.String({ format: 'email' })),
+          name: t.Optional(t.String({ minLength: 2, maxLength: 100 })),
+          avatar_url: t.Optional(t.String({ format: 'uri' })),
+          status: t.Optional(t.Union([t.Literal('active'), t.Literal('inactive')]))
+        })
+      })
+      
+      // DELETE /api/users/:id - Soft delete
+      .delete('/:id', async ({ params }): Promise<ApiResponse> => {
+        try {
+          const user = await models.User.find(params.id);
+          if (!user) {
+            throw new Error('User not found');
+          }
+          
+          await user.softDelete(); // ✅ Soft delete
+          
+          return {
+            success: true,
+            message: 'User deleted successfully'
+          };
+        } catch (error: any) {
+          throw new Error(error.message);
+        }
+      }, {
+        params: t.Object({
+          id: t.String({ format: 'uuid' })
+        })
+      })
+  );</code></pre>
+
+                        <h4>src/routes/posts.ts</h4>
+                        <pre><code class="language-typescript">import { Elysia, t } from 'elysia';
+import { timeuuid } from 'cassandraorm-js';
+import type { ApiResponse, Post, CreatePostRequest } from '../types';
+
+export const postsRoute = (app: Elysia, models: any) =>
+  app.group('/posts', (app) =>
+    app
+      // GET /api/posts - List posts with scopes
+      .get('/', async ({ query }): Promise<ApiResponse<Post[]>> => {
+        try {
+          const { published, user_id, recent, page = 1, limit = 10 } = query;
+          
+          let postQuery = models.Post.query();
+          
+          // Apply scopes
+          if (published) postQuery = postQuery.scope('published');
+          if (user_id) postQuery = postQuery.scope('byUser', user_id);
+          if (recent) postQuery = postQuery.scope('recent', recent);
+          
+          // Include author
+          postQuery = postQuery.with(['author']);
+          
+          const posts = await postQuery
+            .limit(limit)
+            .offset((page - 1) * limit)
+            .get();
+          
+          return {
+            success: true,
+            data: posts
+          };
+        } catch (error: any) {
+          throw new Error(error.message);
+        }
+      }, {
+        query: t.Object({
+          published: t.Optional(t.Boolean()),
+          user_id: t.Optional(t.String({ format: 'uuid' })),
+          recent: t.Optional(t.Number()),
+          page: t.Optional(t.Number({ minimum: 1 })),
+          limit: t.Optional(t.Number({ minimum: 1, maximum: 100 }))
+        })
+      })
+      
+      // POST /api/posts - Create post
+      .post('/', async ({ body }): Promise<ApiResponse<Post>> => {
+        try {
+          const { title, content, user_id, tags = [] } = body as CreatePostRequest;
+          
+          const post = new models.Post({
+            id: timeuuid(),
+            user_id,
+            title,
+            content,
+            tags: new Set(tags)
+          });
+          
+          await post.save(); // ✅ Auto slug generation
+          
+          return {
+            success: true,
+            data: post.toJSON()
+          };
+        } catch (error: any) {
+          throw new Error(error.message);
+        }
+      }, {
+        body: t.Object({
+          title: t.String({ minLength: 5, maxLength: 200 }),
+          content: t.String({ minLength: 10 }),
+          user_id: t.String({ format: 'uuid' }),
+          tags: t.Optional(t.Array(t.String())),
+          published: t.Optional(t.Boolean())
+        })
+      })
+  );</code></pre>
+                    </div>
+
+                    <!-- Server Tab -->
+                    <div class="tab-content" id="server">
+                        <h3>⚡ Elysia Server</h3>
+                        
+                        <h4>src/server.ts</h4>
+                        <pre><code class="language-typescript">import { Elysia } from 'elysia';
+import { cors } from '@elysiajs/cors';
+import { swagger } from '@elysiajs/swagger';
+import { createClient } from 'cassandraorm-js';
+import { userSchema, postSchema } from './models/User';
+import { usersRoute } from './routes/users';
+import { postsRoute } from './routes/posts';
+import type { ApiResponse } from './types';
+
+// Initialize CassandraORM
+async function initializeDatabase() {
+  const client = createClient({
+    clientOptions: {
+      contactPoints: [process.env.CASSANDRA_HOSTS || '127.0.0.1'],
+      localDataCenter: process.env.CASSANDRA_DATACENTER || 'datacenter1',
+      keyspace: process.env.CASSANDRA_KEYSPACE || 'elysia_api'
+    },
+    ormOptions: {
+      createKeyspace: true,
+      migration: 'safe'
+    }
+  });
+
+  await client.connect();
+  console.log('✅ Connected to Cassandra');
+
+  // Load models with all CassandraORM features
+  const User = await client.loadSchema('users', userSchema);
+  const Post = await client.loadSchema('posts', postSchema);
+
+  console.log('✅ Models loaded with TypeScript + CassandraORM');
+
+  return { client, User, Post };
+}
+
+// Create Elysia app
+const app = new Elysia()
+  .use(cors({
+    origin: process.env.NODE_ENV === 'production' 
+      ? ['https://yourdomain.com'] 
+      : true
+  }))
+  .use(swagger({
+    documentation: {
+      info: {
+        title: 'Elysia + CassandraORM API',
+        version: '1.0.0',
+        description: 'High-performance API with all CassandraORM features'
+      },
+      tags: [
+        { name: 'Users', description: 'User management endpoints' },
+        { name: 'Posts', description: 'Post management endpoints' }
+      ]
+    }
+  }))
+  
+  // Health check
+  .get('/health', (): ApiResponse => ({
+    success: true,
+    message: 'Elysia + CassandraORM API is running',
+    data: {
+      timestamp: new Date().toISOString(),
+      features: [
+        'TypeScript Support',
+        'Query Builder Advanced',
+        'Relationships',
+        'Hooks & Events',
+        'Unique Validation',
+        'Scopes & Filters',
+        'Serialization',
+        'Soft Deletes',
+        'Type-safe APIs'
+      ]
+    }
+  }))
+  
+  // Error handling
+  .onError(({ code, error, set }) => {
+    console.error('API Error:', error.message);
+    
+    if (error.message.includes('already exists')) {
+      set.status = 409;
+      return {
+        success: false,
+        error: 'Resource already exists'
+      };
+    }
+    
+    if (error.message.includes('not found')) {
+      set.status = 404;
+      return {
+        success: false,
+        error: 'Resource not found'
+      };
+    }
+    
+    if (code === 'VALIDATION') {
+      set.status = 400;
+      return {
+        success: false,
+        error: 'Validation failed',
+        details: error.message
+      };
+    }
+    
+    set.status = 500;
+    return {
+      success: false,
+      error: process.env.NODE_ENV === 'production' 
+        ? 'Internal server error' 
+        : error.message
+    };
+  });
+
+// Start server
+async function startServer() {
+  try {
+    // Initialize database
+    const models = await initializeDatabase();
+    
+    // Add routes with models
+    app.group('/api', (app) => 
+      app
+        .use((app) => usersRoute(app, models))
+        .use((app) => postsRoute(app, models))
+    );
+    
+    const PORT = process.env.PORT || 3000;
+    
+    app.listen(PORT, () => {
+      console.log(`
+⚡ Elysia + CassandraORM API Started!
+
+📍 Server: http://localhost:${PORT}
+📚 Swagger: http://localhost:${PORT}/swagger
+🏥 Health: http://localhost:${PORT}/health
+👥 Users: http://localhost:${PORT}/api/users
+📝 Posts: http://localhost:${PORT}/api/posts
+
+✅ Features Active:
+  🔍 Query Builder Advanced
+  🔗 Relationships (hasOne, hasMany, belongsTo)
+  🎣 Hooks & Events (beforeSave, afterSave)
+  🔒 Unique Field Validation
+  🎯 Scopes & Filters
+  📄 Serialization (hidden, appends, casts)
+  🗑️ Soft Deletes
+  📝 TypeScript Support
+  ⚡ High Performance (Elysia)
+  📚 Auto-generated Swagger Docs
+      `);
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();</code></pre>
+
+                        <h4>Run the Server</h4>
+                        <pre><code class="language-bash"># Start with Bun (ultra-fast)
+bun run dev
+
+# Test endpoints
+curl http://localhost:3000/health
+
+# View Swagger documentation
+open http://localhost:3000/swagger
+
+# Create user with type validation
+curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@elysia.com",
+    "password": "secret123"
+  }'
+
+# Get users with type-safe queries
+curl "http://localhost:3000/api/users?status=active&recent=7&include=posts"</code></pre>
+                    </div>
+                </div>
+
+                <div class="example-features">
+                    <h3>⚡ Elysia.js + CassandraORM Features</h3>
+                    <div class="features-grid">
+                        <div class="feature-item">
+                            <div class="feature-icon">📝</div>
+                            <div class="feature-content">
+                                <h4>Full TypeScript</h4>
+                                <p>End-to-end type safety with Elysia's validation</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">⚡</div>
+                            <div class="feature-content">
+                                <h4>Ultra Performance</h4>
+                                <p>Bun runtime + Elysia framework for maximum speed</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">📚</div>
+                            <div class="feature-content">
+                                <h4>Auto Swagger</h4>
+                                <p>Automatic API documentation generation</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🔒</div>
+                            <div class="feature-content">
+                                <h4>Type-safe Validation</h4>
+                                <p>Runtime validation with compile-time types</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🎯</div>
+                            <div class="feature-content">
+                                <h4>All ORM Features</h4>
+                                <p>Hooks, scopes, relationships, unique validation</p>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">🚀</div>
+                            <div class="feature-content">
+                                <h4>Modern Stack</h4>
+                                <p>Latest TypeScript, Bun, and Elysia features</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="../js/main.js"></script>
+</body>
+</html>
