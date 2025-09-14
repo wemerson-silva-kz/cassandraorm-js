@@ -30,6 +30,31 @@ export class MetricsCollector extends EventEmitter {
   private labels = new Map<string, Record<string, string>>();
   private startTime = Date.now();
 
+  detectAnomalies(metricName: string, threshold: number = 2): boolean[] {
+    const values = this.histograms.get(metricName) || [];
+    if (values.length < 3) return values.map(() => false);
+    
+    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+    const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    
+    return values.map(value => Math.abs(value - mean) > threshold * stdDev);
+  }
+
+  getAnomalyReport(metricName: string): any {
+    const values = this.histograms.get(metricName) || [];
+    const anomalies = this.detectAnomalies(metricName);
+    
+    return {
+      metricName,
+      totalValues: values.length,
+      anomalousValues: anomalies.filter(Boolean).length,
+      anomalyRate: values.length > 0 ? anomalies.filter(Boolean).length / values.length : 0,
+      threshold: 2,
+      meanValue: values.length > 0 ? values.reduce((sum, val) => sum + val, 0) / values.length : 0
+    };
+  }
+
   constructor(config: MetricsConfig = {}) {
     super();
     const defaultConfig = {
