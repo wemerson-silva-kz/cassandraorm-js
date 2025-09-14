@@ -1,7 +1,7 @@
 import { Client } from 'cassandra-driver';
 import { readFile, readdir } from 'fs/promises';
 import { join, extname } from 'path';
-import type { CassandraValue, DatabaseRow, QueryParameters } from '../types.js';
+import type { CassandraValue, DatabaseRow, QueryParameters } from '../core/types.js';
 
 export interface ImportOptions {
   batchSize?: number;

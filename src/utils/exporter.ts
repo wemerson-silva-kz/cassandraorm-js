@@ -1,7 +1,7 @@
 import { Client } from 'cassandra-driver';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import type { CassandraValue, DatabaseRow } from '../types.js';
+import type { CassandraValue, DatabaseRow } from '../core/types.js';
 
 export class DataExporter {
   constructor(private client: Client, private keyspace: string) {}

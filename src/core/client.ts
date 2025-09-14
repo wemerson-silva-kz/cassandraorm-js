@@ -87,7 +87,7 @@ export class CassandraClient {
   }
 
   private async createKeyspaceIfNotExists(client: Client): Promise<void> {
-    const replication = this.options.ormOptions?.defaultReplicationStrategy || {
+    const replication = {
       class: 'SimpleStrategy',
       replication_factor: 1
     };
@@ -104,8 +104,17 @@ export class CassandraClient {
     await this.client.shutdown();
   }
 
-  async createKeyspaceIfNotExists(keyspaceName: string, options: any = {}): Promise<void> {
-    const replicationStrategy = options.replication || this.options.ormOptions?.defaultReplicationStrategy || {
+  getConnectionStats(): any {
+    return {
+      connected: this.client && !this.client.isShuttingDown,
+      keyspace: this.keyspace,
+      contactPoints: this.options.clientOptions.contactPoints,
+      localDataCenter: this.options.clientOptions.localDataCenter
+    };
+  }
+
+  async createKeyspace(keyspaceName: string, options: any = {}): Promise<void> {
+    const replicationStrategy = options.replication || {
       class: 'SimpleStrategy',
       replication_factor: 1
     };
@@ -270,10 +279,7 @@ export class CassandraClient {
     return { query: cql, params };
   }
 
-  // Getter for driver access
-  get driver(): Client {
-    return this.client;
-  }
+  // Getter for driver access (removed duplicate)
 
   // Elassandra support
   enableElassandra(config: ElasticsearchConfig): void {
@@ -337,7 +343,7 @@ export class CassandraClient {
     this.streaming.eachRow(query, params, options, onReadable, callback);
   }
 
-  streamQuery(query: string, params: QueryParameters = [], options: EachRowOptions = {}): NodeJS.ReadableStream {
+  streamQuery(query: string, params: QueryParameters = [], options: EachRowOptions = { rowCallback: () => {} }): NodeJS.ReadableStream {
     if (!this.streaming) {
       throw new Error('Client not connected');
     }
@@ -381,11 +387,9 @@ export class CassandraClient {
     return types.TimeUuid.min(date, 0);
   }
 
-  // Instance methods for UUID utilities
-  uuid = CassandraClient.uuid;
+  // Instance methods for UUID utilities (removed duplicates)
   uuidFromString = CassandraClient.uuidFromString;
   uuidFromBuffer = CassandraClient.uuidFromBuffer;
-  timeuuid = CassandraClient.timeuuid;
   timeuuidFromDate = CassandraClient.timeuuidFromDate;
   timeuuidFromString = CassandraClient.timeuuidFromString;
   timeuuidFromBuffer = CassandraClient.timeuuidFromBuffer;
@@ -399,10 +403,6 @@ export class CassandraClient {
 
   get datatypes() {
     return types;
-  }
-
-  get driver() {
-    return this.client;
   }
 
   get instance() {
@@ -423,7 +423,7 @@ export class CassandraClient {
 
     // Execute before hooks
     for (const query of queries) {
-      if (query.after_hook) {
+      if ((query as any).after_hook) {
         // Store for later execution
       }
     }
@@ -499,9 +499,10 @@ export class CassandraClient {
     }
     
     // Process primary key
-    const primaryKey = Array.isArray(schema.key[0]) 
-      ? `(${schema.key[0].join(', ')})${schema.key.slice(1).length > 0 ? ', ' + schema.key.slice(1).join(', ') : ''}`
-      : schema.key.join(', ');
+    const keyArray = Array.isArray(schema.key) ? schema.key : [schema.key];
+    const primaryKey = Array.isArray(keyArray[0]) 
+      ? `(${keyArray[0].join(', ')})${keyArray.slice(1).length > 0 ? ', ' + keyArray.slice(1).join(', ') : ''}`
+      : keyArray.join(', ');
     
     const query = `
       CREATE TABLE IF NOT EXISTS ${this.keyspace}.${tableName} (
@@ -518,9 +519,29 @@ export class CassandraClient {
   }
 
   private async processUniqueFields(tableName: string, schema: ModelSchema): Promise<void> {
-    // Não criar tabelas auxiliares - validação será feita no ORM
+    // Extrair campos unique dos fields individuais
+    const uniqueFields: string[] = [];
+    
+    // Adicionar campos do array unique (se existir)
     if (schema.unique && schema.unique.length > 0) {
-      console.log(`✅ Schema ${tableName} configurado com campos únicos: ${schema.unique.join(', ')}`);
+      uniqueFields.push(...schema.unique);
+    }
+    
+    // Adicionar campos com unique: true nos fields
+    if (schema.fields) {
+      for (const [fieldName, fieldDef] of Object.entries(schema.fields)) {
+        if (typeof fieldDef === 'object' && fieldDef.unique === true) {
+          if (!uniqueFields.includes(fieldName)) {
+            uniqueFields.push(fieldName);
+          }
+        }
+      }
+    }
+    
+    // Atualizar o schema com todos os campos unique
+    if (uniqueFields.length > 0) {
+      schema.unique = uniqueFields;
+      console.log(`✅ Schema ${tableName} configurado com campos únicos: ${uniqueFields.join(', ')}`);
     }
   }
 
@@ -697,7 +718,7 @@ export class CassandraClient {
       }
 
       isNew(): boolean {
-        return this._isNew !== false;
+        return (this as any).isNew !== false;
       }
 
       getModifiedFields(): Record<string, any> {
@@ -725,7 +746,7 @@ export class CassandraClient {
 
         // Validação automática de campos únicos
         if (schema.unique && schema.unique.length > 0) {
-          const tableName = schema.options?.table_name || name;
+          const tableName = schema.table_name || schema.options?.table_name || name;
           const data = this.toObject();
           
           // Para novos registros ou registros modificados
@@ -792,7 +813,8 @@ export class CassandraClient {
           throw new Error("before_delete hook returned false");
         }
 
-        const keyFields = schema.key.flat();
+        const keyArray = Array.isArray(schema.key) ? schema.key : [schema.key];
+        const keyFields = keyArray.flat();
         const whereClause = keyFields
           .map((field) => `"${field}" = ?`)
           .join(" AND ");
@@ -875,11 +897,27 @@ export class CassandraClient {
         );
       }
 
-      static async create(data: Partial<T>): Promise<T> {
-        const tableName = schema.options?.table_name || name;
+      static async create(data: Partial<T>, options: { upsert?: boolean } = {}): Promise<T> {
+        const tableName = schema.table_name || schema.options?.table_name || name;
         
-        // Validação automática de campos únicos
-        if (schema.unique && schema.unique.length > 0) {
+        // Para upsert, verificar se já existe e atualizar se necessário
+        if (options.upsert && schema.unique && schema.unique.length > 0) {
+          for (const field of schema.unique) {
+            if (data[field] !== undefined) {
+              const existing = await this.findOne({ [field]: data[field] }, { allow_filtering: true });
+              if (existing) {
+                // Atualizar registro existente (excluir campos de chave primária)
+                const updateData = { ...data };
+                delete updateData.id; // Remover ID da atualização
+                if (Object.keys(updateData).length > 0) {
+                  await this.update({ id: existing.id }, updateData);
+                }
+                return existing;
+              }
+            }
+          }
+        } else if (schema.unique && schema.unique.length > 0) {
+          // Validação normal para create sem upsert
           await clientInstance.validateUniqueFields(tableName, data, schema);
         }
         
@@ -891,7 +929,7 @@ export class CassandraClient {
         await client.execute(query, values);
         
         const instance = new this(data);
-        instance._isNew = false;
+        (instance as any).isNew = false;
         instance._modified = {};
         return instance as unknown as T;
       }
@@ -968,6 +1006,43 @@ export class CassandraClient {
         }
 
         return result;
+      }
+
+      static async createMany(dataArray: Partial<T>[], options: { ignoreDuplicates?: boolean } = {}): Promise<T[]> {
+        const results: T[] = [];
+        
+        for (const data of dataArray) {
+          try {
+            if (options.ignoreDuplicates && schema.unique && schema.unique.length > 0) {
+              // Verificar se já existe
+              let exists = false;
+              for (const field of schema.unique) {
+                if (data[field] !== undefined) {
+                  const existing = await this.findOne({ [field]: data[field] }, { allow_filtering: true });
+                  if (existing) {
+                    exists = true;
+                    break;
+                  }
+                }
+              }
+              
+              if (!exists) {
+                const created = await this.create(data);
+                results.push(created);
+              }
+            } else {
+              const created = await this.create(data);
+              results.push(created);
+            }
+          } catch (error) {
+            if (!options.ignoreDuplicates) {
+              throw error;
+            }
+            // Ignorar erros de duplicata se ignoreDuplicates = true
+          }
+        }
+        
+        return results;
       }
 
       static async updateAsync(

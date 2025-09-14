@@ -190,9 +190,11 @@ export class TimeSeriesManager {
       cqlQuery += ` AND ${tagConditions.join(' AND ')}`;
       
       // Add the keys for the tag conditions
-      Object.keys(query.tags).forEach(key => {
-        params.splice(-Object.keys(query.tags).length, 0, key);
-      });
+      if (query.tags) {
+        Object.keys(query.tags).forEach(key => {
+          params.splice(-Object.keys(query.tags!).length, 0, key);
+        });
+      }
     }
 
     cqlQuery += ' ALLOW FILTERING';

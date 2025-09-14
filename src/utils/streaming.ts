@@ -1,6 +1,6 @@
 import { Client } from 'cassandra-driver';
 import { Readable, Transform } from 'stream';
-import type { QueryOptions, FindQuery, QueryParameters, DatabaseRow, CassandraValue, EachRowOptions, ResultSet } from '../types.js';
+import type { QueryOptions, FindQuery, QueryParameters, DatabaseRow, CassandraValue, EachRowOptions, ResultSet } from '../core/types.js';
 
 export interface StreamResult {
   rowCount: number;

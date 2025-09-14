@@ -136,7 +136,7 @@ export class SoftDeleteQueryBuilder {
   private softDeleteManager: SoftDeleteManager;
   private schema?: ModelSchema;
   private includeTrashed = false;
-  private onlyTrashed = false;
+  private onlyTrashedFlag = false;
   protected conditions: any[] = [];
   protected joins: any[] = [];
   protected options: any = {};
@@ -165,7 +165,7 @@ export class SoftDeleteQueryBuilder {
 
   // Only soft deleted records
   onlyTrashed(): this {
-    this.onlyTrashed = true;
+    this.onlyTrashedFlag = true;
     return this;
   }
 

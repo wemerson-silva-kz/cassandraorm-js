@@ -42,7 +42,7 @@ export class MetricsCollector extends EventEmitter {
       customMetrics: [],
       retention: 3600, // 1 hour
       ...config,
-      prometheus: { ...config.prometheus }
+      prometheus: { ...defaultConfig.prometheus, ...config.prometheus }
     };
   }
 

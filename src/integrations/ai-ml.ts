@@ -110,9 +110,11 @@ export class AIMLManager {
       query += ` WHERE ${conditions.join(' AND ')}`;
       
       // Add keys for metadata conditions
-      Object.keys(options.metadata).forEach(key => {
-        params.splice(-Object.keys(options.metadata).length, 0, key);
-      });
+      if (options.metadata) {
+        Object.keys(options.metadata).forEach(key => {
+          params.splice(-Object.keys(options.metadata!).length, 0, key);
+        });
+      }
       
       query += ' ALLOW FILTERING';
     }

@@ -45,6 +45,10 @@
   "scripts": {
     "test": "node playground/test-ci-simple.js",
     "test:full": "bun test",
+    "test:quick": "bun run ./playground/test-quick.ts",
+    "test:unique": "bun run ./playground/test-unique-simple.ts",
+    "test:crud": "bun run ./playground/test-crud-simple.ts",
+    "test:complete": "bun run ./playground/test-complete-orm.ts",
     "test:integration": "bun run tests/integration.test.ts",
     "test:ci": "node playground/test-ci-simple.js",
     "build": "bun build src/index.ts --outdir dist --target node && cp types.d.ts dist/index.d.ts 2>/dev/null || echo 'Using embedded types...'",

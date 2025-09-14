@@ -318,7 +318,7 @@ export class BackupManager extends EventEmitter {
     const filePath = join(backupPath, `${tableName}.jsonl`);
     const actualPath = this.config.compression ? `${filePath}.gz` : filePath;
     
-    let readStream = createReadStream(actualPath);
+    let readStream: NodeJS.ReadableStream = createReadStream(actualPath);
     
     if (this.config.compression) {
       readStream = readStream.pipe(createGunzip());
@@ -327,8 +327,9 @@ export class BackupManager extends EventEmitter {
     const batch: any[] = [];
     let lineBuffer = '';
 
-    readStream.on('data', (chunk: Buffer) => {
-      lineBuffer += chunk.toString();
+    readStream.on('data', (chunk: string | Buffer) => {
+      const chunkStr = chunk instanceof Buffer ? chunk.toString() : chunk;
+      lineBuffer += chunkStr;
       const lines = lineBuffer.split('\n');
       lineBuffer = lines.pop() || '';
 

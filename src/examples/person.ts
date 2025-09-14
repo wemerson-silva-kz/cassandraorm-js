@@ -1,4 +1,4 @@
-import type { ModelSchema } from '../types.js';
+import type { ModelSchema } from '../core/types.js';
 
 export interface Person {
   userID: number;

@@ -196,7 +196,7 @@ export class SemanticCache {
       'avg': 1.4,
       'max': 1.4,
       'min': 1.4
-    };
+    } as Record<string, number>;
 
     return importantWords[word.toLowerCase()] || 1.0;
   }

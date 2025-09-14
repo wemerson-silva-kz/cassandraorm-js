@@ -1,364 +1,551 @@
-import type { 
-  Client, 
-  types, 
-  QueryOptions as DriverQueryOptions,
-  ClientOptions as DriverClientOptions,
-  DseClientOptions as DriverDseClientOptions,
-  ArrayOrObject
-} from 'cassandra-driver';
+import { Client, types } from "cassandra-driver";
 
-// Re-export driver types for convenience
-export type UUID = types.Uuid;
-export type TimeUUID = types.TimeUuid;
-export type Integer = types.Integer;
-export type InetAddress = types.InetAddress;
-export type Tuple = types.Tuple;
-export type LocalDate = types.LocalDate;
-export type LocalTime = types.LocalTime;
-export type Long = types.Long;
-export type BigDecimal = types.BigDecimal;
-export type ResultSet = types.ResultSet;
-export type Row = types.Row;
+export interface CassandraClientOptions {
+  clientOptions: {
+    contactPoints: string[];
+    localDataCenter: string;
+    keyspace?: string;
+    credentials?: {
+      username: string;
+      password: string;
+    };
+  };
+  ormOptions?: {
+    createKeyspace?: boolean;
+    migration?: 'safe' | 'alter' | 'drop';
+  };
+}
 
-// Cassandra data types mapping
-export type CassandraDataTypes = {
-  uuid: UUID;
-  timeuuid: TimeUUID;
-  text: string;
-  varchar: string;
-  ascii: string;
-  int: number;
-  bigint: Long;
-  varint: Integer;
-  smallint: number;
-  tinyint: number;
-  float: number;
-  double: number;
-  decimal: BigDecimal;
-  boolean: boolean;
-  inet: InetAddress;
-  date: LocalDate;
-  time: LocalTime;
-  timestamp: Date;
-  blob: Buffer;
-  counter: Long;
-  list: unknown[];
-  set: unknown[];
-  map: Record<string, unknown>;
-  tuple: Tuple;
-  frozen: unknown;
-};
+export interface FieldDefinition {
+  type: string;
+  unique?: boolean;
+  required?: boolean;
+  default?: any;
+  virtual?: boolean;
+  validate?: {
+    required?: boolean;
+    isEmail?: boolean;
+    minLength?: number;
+    maxLength?: number;
+    min?: number;
+    max?: number;
+    pattern?: RegExp;
+  };
+}
 
-// Basic types
-export type CassandraValue = 
-  | string 
-  | number 
-  | boolean 
-  | Date 
-  | Buffer 
-  | null 
-  | undefined
-  | UUID
-  | TimeUUID
-  | Integer
-  | InetAddress
-  | Tuple
-  | LocalDate
-  | LocalTime
-  | Long
-  | BigDecimal
-  | Map<unknown, unknown>
-  | Set<unknown>
-  | unknown[]
-  | Record<string, unknown>;
+export interface ModelSchema {
+  fields: Record<string, string | FieldDefinition>;
+  key: string | string[];
+  unique?: string[];
+  clustering_order?: Record<string, 'ASC' | 'DESC'>;
+  relations?: Record<string, RelationDefinition>;
+  indexes?: Record<string, IndexDefinition>;
+  materialized_views?: Record<string, MaterializedViewDefinition>;
+  options?: ModelOptions;
+  table_name?: string;
+  methods?: Record<string, Function>;
+  before_save?: (instance: any, options: any) => boolean;
+  after_save?: (instance: any, result: any) => void;
+  before_update?: (query: any, updateValues: any, options: any) => boolean;
+  after_update?: (query: any, updateValues: any, result: any) => void;
+  before_delete?: (query: any, options: any) => boolean;
+  after_delete?: (query: any, result: any) => void;
+}
 
-export type QueryParameters = ArrayOrObject;
-export type DatabaseRow = Record<string, unknown>;
+export interface RelationDefinition {
+  model: string;
+  foreignKey: string;
+  type: 'hasOne' | 'hasMany' | 'belongsTo';
+}
 
-// Extended QueryOptions with ORM-specific options
-export interface QueryOptions extends DriverQueryOptions {
-  // ORM-specific options
-  return_query?: boolean;
-  debug?: boolean;
-  raw?: boolean;
-  allow_filtering?: boolean;
-  distinct?: boolean;
-  count?: boolean;
-  limit?: number;
-  token?: CassandraValue;
-  filters?: Record<string, CassandraValue>;
-  order_by?: Record<string, 'asc' | 'desc'>;
-  group_by?: string[];
+export interface IndexDefinition {
+  target: string | string[];
+  options?: Record<string, any>;
+}
+
+export interface MaterializedViewDefinition {
+  select: string[];
+  key: string[];
+  clustering_order?: Record<string, 'ASC' | 'DESC'>;
+}
+
+export interface ModelOptions {
+  timestamps?: {
+    createdAt?: string;
+    updatedAt?: string;
+  } | boolean;
+  versions?: {
+    key?: string;
+  } | boolean;
+  compaction?: Record<string, CassandraValue>;
+  compression?: Record<string, CassandraValue>;
+  gc_grace_seconds?: number;
+  bloom_filter_fp_chance?: number;
+  caching?: Record<string, CassandraValue>;
+  comment?: string;
+  table_name?: string;
+}
+
+export interface QueryOptions {
+  prepare?: boolean;
+  consistency?: number;
+  fetchSize?: number;
+  autoPage?: boolean;
+  pageState?: string;
+  hints?: string[];
+  traceQuery?: boolean;
+  customPayload?: Record<string, Buffer>;
+  executionProfile?: string;
+  isIdempotent?: boolean;
+  keyspace?: string;
+  logged?: boolean;
+  readTimeout?: number;
+  retry?: any;
+  routingIndexes?: number[];
+  routingKey?: Buffer | Buffer[];
+  routingNames?: string[];
+  serialConsistency?: number;
+  timestamp?: number;
+  counter?: boolean;
   ttl?: number;
   if_not_exist?: boolean;
-  if_exist?: boolean;
-  conditions?: Record<string, CassandraValue>;
-  materialized_view?: string;
-  select?: string[];
+  allow_filtering?: boolean;
 }
 
-// Client options extending driver options
-export interface CassandraClientOptions {
-  clientOptions: DriverDseClientOptions;
-  ormOptions?: {
-    defaultReplicationStrategy?: Record<string, unknown>;
-    migration?: 'safe' | 'alter' | 'drop';
-    createKeyspace?: boolean;
-    createTable?: boolean;
-    disableTTYColors?: boolean;
-    disableTTYConfirmation?: boolean;
-    manageESIndex?: boolean;
-    udts?: Record<string, UDTDefinition>;
-    udfs?: Record<string, UDFDefinition>;
-    udas?: Record<string, UDADefinition>;
-  };
-}
-
-// Field definition for schema
-export interface FieldDefinition {
-  type: keyof CassandraDataTypes | string;
-  typeDef?: string;
-  default?: CassandraValue | { $db_function: string } | (() => CassandraValue);
-  unique?: boolean;
-  rule?: 
-    | ((value: CassandraValue) => boolean) 
-    | { 
-        required?: boolean; 
-        validators?: Array<{ 
-          validator: (value: CassandraValue) => boolean; 
-          message: string | ((value: CassandraValue) => string) 
-        }> 
-      };
-  virtual?: {
-    get?: (this: any) => CassandraValue;
-    set?: (this: any, value: CassandraValue) => void;
-  };
-}
-
-// Materialized view definition
-export interface MaterializedView {
-  select: string[] | ['*'];
-  key: Array<string | string[]>;
-  clustering_order?: Record<string, 'asc' | 'desc'>;
-  filters?: Record<string, {
-    $gte?: CassandraValue;
-    $lte?: CassandraValue;
-    $gt?: CassandraValue;
-    $lt?: CassandraValue;
-    $eq?: CassandraValue;
-    $in?: CassandraValue[];
-    $isnt?: CassandraValue;
-  }>;
-}
-
-// Graph mapping for JanusGraph
-export interface GraphMapping {
-  relations?: Record<string, {
-    relation: string;
-    direction: 'in' | 'out' | 'both';
-    properties?: string[];
-  }>;
-  indexes?: Array<{
-    name: string;
-    type: 'Composite' | 'Mixed';
-    keys: string[];
-    unique?: boolean;
-  }>;
-}
-
-// User Defined Types
-export interface UDTDefinition {
-  fields: Record<string, string | FieldDefinition>;
-}
-
-// User Defined Functions
-export interface UDFDefinition {
-  language: 'java' | 'javascript';
-  code: string;
-  inputs: Record<string, string>;
-  returns: string;
-  deterministic?: boolean;
-  monotonic?: boolean;
-}
-
-// User Defined Aggregates
-export interface UDADefinition {
-  inputs: Record<string, string>;
-  sfunc: string;
-  stype: string;
-  finalfunc?: string;
-  initcond?: CassandraValue;
-  deterministic?: boolean;
-}
-
-// Model schema definition
-export interface ModelSchema {
-  fields: Record<string, FieldDefinition | string>;
-  key: Array<string | string[]>;
-  unique?: string[]; // Campos únicos adicionais
-  clustering_order?: Record<string, 'asc' | 'desc'>;
-  indexes?: string[];
-  custom_indexes?: Array<{
-    on: string;
-    using: string;
-    options?: Record<string, CassandraValue>;
-  }>;
-  materialized_views?: Record<string, MaterializedView>;
-  graph_mapping?: GraphMapping;
-  table_name?: string;
-  options?: {
-    timestamps?: {
-      createdAt?: string;
-      updatedAt?: string;
-    };
-    versions?: {
-      key?: string;
-    };
-    compaction?: Record<string, CassandraValue>;
-    compression?: Record<string, CassandraValue>;
-    gc_grace_seconds?: number;
-    default_time_to_live?: number;
-    speculative_retry?: string;
-    caching?: Record<string, CassandraValue>;
-    comment?: string;
-  };
-  before_save?: <T = any>(instance: T, options?: QueryOptions) => boolean;
-  after_save?: <T = any>(instance: T, options?: QueryOptions) => boolean;
-  before_update?: (query: FindQuery, updateValues: Record<string, CassandraValue>, options?: QueryOptions) => boolean;
-  after_update?: (query: FindQuery, updateValues: Record<string, CassandraValue>, options?: QueryOptions) => boolean;
-  before_delete?: (query: FindQuery, options?: QueryOptions) => boolean;
-  after_delete?: (query: FindQuery, options?: QueryOptions) => boolean;
-  methods?: Record<string, Function>;
-}
-
-// Query interfaces
 export interface FindQuery {
-  // Standard field queries
-  [key: string]: CassandraValue | {
-    $eq?: CassandraValue;
-    $ne?: CassandraValue;
-    $isnt?: CassandraValue;
-    $gt?: CassandraValue;
-    $gte?: CassandraValue;
-    $lt?: CassandraValue;
-    $lte?: CassandraValue;
-    $in?: CassandraValue[];
-    $like?: string;
-    $token?: { $gt?: CassandraValue; $gte?: CassandraValue; $lt?: CassandraValue; $lte?: CassandraValue };
-    $contains?: CassandraValue;
-    $contains_key?: CassandraValue;
-  };
-  
-  // Special operators
+  [key: string]: any;
+  where?: Record<string, any>;
+  select?: string[];
+  limit?: number;
   $limit?: number;
-  $per_partition_limit?: number;
-  $orderby?: Record<string, 'asc' | 'desc'> | { $asc: string | string[] } | { $desc: string | string[] };
-  $groupby?: string[];
-  $distinct?: string[];
-  $count?: boolean;
-  $filters?: Record<string, CassandraValue>;
-  $expr?: {
-    index: string;
-    query: string;
-  };
-  $solr_query?: string;
+  orderBy?: Record<string, 'ASC' | 'DESC'>;
+  $orderby?: Record<string, 'ASC' | 'DESC'>;
+  allowFiltering?: boolean;
+  raw?: boolean;
 }
 
 export interface BatchQuery {
   query: string;
-  params?: QueryParameters;
-  after_hook?: () => boolean | Error;
+  params?: any[];
 }
 
-// Streaming options
-export interface StreamOptions extends QueryOptions {
-  objectMode?: boolean;
-  highWaterMark?: number;
-}
-
-export interface EachRowOptions extends QueryOptions {
-  autoPage?: boolean;
+export interface StreamOptions {
+  prepare?: boolean;
   fetchSize?: number;
+  autoPage?: boolean;
 }
 
-// Model interfaces
+export interface EachRowOptions extends StreamOptions {
+  rowCallback: (n: number, row: any) => void;
+  endCallback?: (error?: Error, totalCount?: number) => void;
+}
+
+export type CassandraValue = string | number | boolean | Date | Buffer | types.Uuid | types.TimeUuid | types.BigDecimal | types.InetAddress | types.Tuple | types.LocalDate | types.LocalTime;
+
+export type QueryParameters = CassandraValue[];
+
+export interface DatabaseRow {
+  [key: string]: CassandraValue;
+}
+
+export interface ResultSet {
+  rows: DatabaseRow[];
+  info: {
+    queriedHost: string;
+    triedHosts: Record<string, string>;
+    achievedConsistency: number;
+    traceId: types.Uuid;
+    warnings: string[];
+    customPayload: Record<string, Buffer>;
+  };
+  pageState?: string;
+  nextPage?: () => Promise<ResultSet>;
+}
+
 export interface BaseModelInstance {
-  // Instance methods
   save(options?: QueryOptions): Promise<this>;
   saveAsync(options?: QueryOptions): Promise<this>;
   delete(options?: QueryOptions): Promise<void>;
   deleteAsync(options?: QueryOptions): Promise<void>;
-  toJSON(): DatabaseRow;
+  toJSON(): Record<string, any>;
   isModified(propName?: string): boolean;
-  
-  // Validation
-  validate(propName?: string): Record<string, string> | null;
-  
-  // Internal properties
+  validate(propName?: string): { [key: string]: string } | null;
+  isNew?: boolean;
   _modified: Record<string, boolean>;
   _validators: Record<string, Function[]>;
 }
 
-export interface ModelStatic<T = DatabaseRow> {
-  new(data?: Partial<T>): T & BaseModelInstance;
-  
-  // Static query methods
-  find(query?: FindQuery, options?: QueryOptions): Promise<(T & BaseModelInstance)[]>;
-  findOne(query?: FindQuery, options?: QueryOptions): Promise<(T & BaseModelInstance) | null>;
-  findOneAsync(query?: FindQuery, options?: QueryOptions): Promise<(T & BaseModelInstance) | null>;
-  
-  // Update methods
-  update(query: FindQuery, updateValues: Partial<T>, options?: QueryOptions): Promise<ResultSet>;
-  updateAsync(query: FindQuery, updateValues: Partial<T>, options?: QueryOptions): Promise<ResultSet>;
-  
-  // Delete methods
-  delete(query: FindQuery, options?: QueryOptions): Promise<ResultSet>;
-  deleteAsync(query: FindQuery, options?: QueryOptions): Promise<ResultSet>;
-  
-  // Streaming
+export interface ModelStatic<T = BaseModelInstance> {
+  new (...args: any[]): T;
+  find(query?: FindQuery, options?: QueryOptions): Promise<T[]>;
+  findOne(query?: FindQuery, options?: QueryOptions): Promise<T | null>;
+  findOneAsync(query?: FindQuery, options?: QueryOptions): Promise<T | null>;
+  create(data: Partial<T>, options?: { upsert?: boolean }): Promise<T>;
+  createMany(dataArray: Partial<T>[], options?: { ignoreDuplicates?: boolean }): Promise<T[]>;
+  update(query: FindQuery, updateValues: Partial<T>, options?: QueryOptions): Promise<any>;
+  updateAsync(query: FindQuery, updateValues: Partial<T>, options?: QueryOptions): Promise<any>;
+  delete(query: FindQuery, options?: QueryOptions): Promise<any>;
+  deleteAsync(query: FindQuery, options?: QueryOptions): Promise<any>;
   stream(query?: FindQuery, options?: StreamOptions): NodeJS.ReadableStream;
-  eachRow(
-    query: FindQuery, 
-    options: EachRowOptions, 
-    onReadable: (n: number, row: T & BaseModelInstance) => void, 
-    callback?: (err?: Error, result?: ResultSet) => void
-  ): void;
-  
-  // Batch operations
-  get_cql_client(): Client;
-  execute_query(query: string, params?: QueryParameters, options?: QueryOptions): Promise<ResultSet>;
-  execute_batch(queries: BatchQuery[], options?: QueryOptions): Promise<ResultSet>;
-  
-  // Schema operations
-  syncDB(callback?: (err?: Error, result?: boolean) => void): void;
-  syncDBAsync(): Promise<boolean>;
-  
-  // Truncate
+  eachRow(query: FindQuery, options: any, rowCallback: Function, callback?: Function): void;
   truncate(callback?: (err?: Error) => void): void;
-  truncateAsync(): Promise<void>;
-  
-  // Graph operations (JanusGraph)
-  createVertex?(vertexProperties: Record<string, CassandraValue>): Promise<unknown>;
-  getVertex?(vertexId: CassandraValue): Promise<Record<string, CassandraValue> | null>;
-  updateVertex?(vertexId: CassandraValue, vertexProperties: Record<string, CassandraValue>): Promise<void>;
-  deleteVertex?(vertexId: CassandraValue): Promise<void>;
-  createEdge?(
-    edgeLabel: string, 
-    fromVertex: CassandraValue, 
-    toVertex: CassandraValue, 
-    edgeProperties?: Record<string, CassandraValue>
-  ): Promise<unknown>;
-  getEdge?(edgeId: CassandraValue): Promise<Record<string, CassandraValue> | null>;
-  updateEdge?(edgeId: CassandraValue, edgeProperties: Record<string, CassandraValue>): Promise<void>;
-  deleteEdge?(edgeId: CassandraValue): Promise<void>;
-  graphQuery?(query: string): Promise<unknown[]>;
-  
-  // Search operations (Elassandra)
-  search?(query: unknown, options?: unknown): Promise<unknown>;
-  
-  // Properties
-  _properties: {
-    name: string;
-    schema: ModelSchema;
+  get_table_name(): string;
+  get_keyspace_name(): string;
+  is_table_ready(): boolean;
+  init(options?: QueryOptions): Promise<void>;
+  syncDB(options?: QueryOptions): Promise<void>;
+  drop_table(options?: QueryOptions): Promise<void>;
+  tableName?: string;
+}
+
+// Batch Query Interface
+export interface BatchQuery {
+  query: string;
+  params?: any[];
+  after_hook?: Function;
+}
+
+// Model Interface
+export interface Model extends BaseModelInstance {
+  [key: string]: any;
+  id?: any;
+}
+
+// Export types from cassandra-driver
+export type CassandraDataTypes = types.dataTypes;
+export type GraphMapping = any;
+export type InetAddress = types.InetAddress;
+export type Integer = types.Integer;
+export type LocalDate = types.LocalDate;
+export type LocalTime = types.LocalTime;
+export type MaterializedView = any;
+export type TimeUUID = types.TimeUuid;
+export type Tuple = types.Tuple;
+export type UDADefinition = any;
+export type UDFDefinition = any;
+export type UDTDefinition = any;
+export type UUID = types.Uuid;
+
+// Additional types for all ORM features
+export interface CacheOptions {
+  ttl?: number;
+  maxSize?: number;
+  strategy?: 'LRU' | 'LFU' | 'FIFO';
+}
+
+export interface CacheEntry {
+  key: string;
+  value: any;
+  timestamp: number;
+  ttl?: number;
+  hits: number;
+}
+
+export interface SemanticCacheConfig {
+  similarityThreshold: number;
+  maxEntries?: number;
+  ttl?: number;
+}
+
+export interface BulkWriterOptions {
+  batchSize?: number;
+  concurrency?: number;
+  retries?: number;
+}
+
+export interface BulkOperation {
+  type: 'insert' | 'update' | 'delete';
+  table: string;
+  data: any;
+}
+
+export interface BulkResult {
+  success: number;
+  failed: number;
+  errors: Error[];
+}
+
+export interface StreamingOptions {
+  batchSize?: number;
+  highWaterMark?: number;
+}
+
+export interface StreamingStats {
+  processed: number;
+  errors: number;
+  rate: number;
+}
+
+export interface TimeSeriesOptions {
+  retention?: string;
+  compression?: boolean;
+  aggregation?: string[];
+}
+
+export interface ValidationRule {
+  field: string;
+  type: string;
+  required?: boolean;
+  validator?: Function;
+}
+
+export interface ValidationError {
+  field: string;
+  message: string;
+  value: any;
+}
+
+export interface UniqueConstraintOptions {
+  fields: string[];
+  caseSensitive?: boolean;
+}
+
+export interface MigrationOptions {
+  direction: 'up' | 'down';
+  version?: string;
+}
+
+export interface MetricOptions {
+  name: string;
+  type: 'counter' | 'gauge' | 'histogram';
+  labels?: Record<string, string>;
+}
+
+export interface HistogramBucket {
+  le: number;
+  count: number;
+}
+
+export interface TracingOptions {
+  enabled: boolean;
+  sampleRate?: number;
+  tags?: Record<string, string>;
+}
+
+export interface HookFunction {
+  (context: HookContext): Promise<void> | void;
+}
+
+export interface HookContext {
+  operation: string;
+  model: string;
+  data?: any;
+  query?: any;
+  result?: any;
+}
+
+export interface MultiTenantConfig {
+  strategy: 'keyspace' | 'table' | 'row';
+  tenantField?: string;
+}
+
+export interface GraphQLResolverConfig {
+  model: string;
+  operations: string[];
+  middleware?: Function[];
+}
+
+export interface GraphQLType {
+  name: string;
+  fields: Record<string, any>;
+}
+
+export interface EventStoreConfig {
+  snapshotFrequency?: number;
+  eventBatchSize?: number;
+}
+
+export interface AggregateRoot {
+  id: string;
+  version: number;
+  events: DomainEvent[];
+}
+
+export interface DomainEvent {
+  id: string;
+  type: string;
+  data: any;
+  timestamp: Date;
+  version: number;
+}
+
+export interface SagaStep {
+  name: string;
+  action: Function;
+  compensation: Function;
+}
+
+export interface TransactionConfig {
+  timeout?: number;
+  retries?: number;
+  isolation?: 'read_committed' | 'serializable';
+}
+
+export interface TransactionOperation {
+  type: 'prepare' | 'commit' | 'rollback';
+  transactionId: string;
+  data?: any;
+}
+
+export interface SubscriptionConfig {
+  table: string;
+  operation: 'insert' | 'update' | 'delete' | 'all';
+  filter?: Record<string, any>;
+}
+
+export interface Subscription {
+  id: string;
+  config: SubscriptionConfig;
+  callback: Function;
+}
+
+export interface AIConfig {
+  provider: 'openai' | 'anthropic' | 'local';
+  apiKey?: string;
+  model?: string;
+}
+
+export interface VectorSearchOptions {
+  k?: number;
+  threshold?: number;
+  metric?: 'cosine' | 'euclidean' | 'dot_product';
+}
+
+export interface ImportOptions {
+  truncate?: boolean;
+  batchSize?: number;
+  skipErrors?: boolean;
+}
+
+export interface PaginationOptions {
+  pageSize?: number;
+  pageState?: string;
+  autoPage?: boolean;
+}
+
+export interface CursorPaginationResult<T> {
+  data: T[];
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  startCursor?: string;
+  endCursor?: string;
+}
+
+export interface BackupConfig {
+  destination: string;
+  compression?: boolean;
+  encryption?: boolean;
+}
+
+export interface RestoreOptions {
+  source: string;
+  overwrite?: boolean;
+  skipValidation?: boolean;
+}
+
+export interface OptimizationConfig {
+  enableQueryOptimization?: boolean;
+  enableIndexSuggestions?: boolean;
+  enablePerformanceMonitoring?: boolean;
+}
+
+export interface OptimizationSuggestion {
+  type: 'index' | 'query' | 'schema';
+  description: string;
+  impact: 'low' | 'medium' | 'high';
+  query?: string;
+}
+
+export interface ElasticsearchConfig {
+  host: string;
+  port?: number;
+  auth?: {
+    username: string;
+    password: string;
   };
+}
+
+export interface SearchQuery {
+  index: string;
+  body: any;
+  size?: number;
+  from?: number;
+}
+
+// Advanced Query Builder Types
+export interface WhereCondition {
+  field: string;
+  operator: '=' | '!=' | '>' | '<' | '>=' | '<=' | 'IN' | 'CONTAINS';
+  value: any;
+}
+
+export interface QueryBuilderOptions {
+  allowFiltering?: boolean;
+  limit?: number;
+  orderBy?: Record<string, 'ASC' | 'DESC'>;
+}
+
+export interface PopulateOptions {
+  path: string;
+  select?: string[];
+  match?: Record<string, any>;
+}
+
+export interface AggregationPipeline {
+  $match?: Record<string, any>;
+  $group?: Record<string, any>;
+  $sort?: Record<string, any>;
+  $limit?: number;
+  $skip?: number;
+}
+
+export interface AggregationResult {
+  _id: any;
+  count?: number;
+  sum?: number;
+  avg?: number;
+  min?: any;
+  max?: any;
+}
+
+// Connection Pool Types
+export interface AdvancedPoolOptions {
+  coreConnections?: number;
+  maxConnections?: number;
+  maxRequestsPerConnection?: number;
+  heartBeatInterval?: number;
+  poolTimeout?: number;
+  idleTimeout?: number;
+}
+
+export interface LoadBalancingOptions {
+  policy: 'RoundRobin' | 'DCAwareRoundRobin' | 'TokenAware';
+  localDataCenter?: string;
+}
+
+export interface ConnectionStats {
+  totalConnections: number;
+  activeConnections: number;
+  idleConnections: number;
+  requestsInFlight: number;
+}
+
+// Soft Delete Types
+export interface SoftDeleteOptions {
+  deletedField?: string;
+  deletedValue?: any;
+  includeDeleted?: boolean;
+}
+
+// Serialization Types
+export interface SerializationOptions {
+  format: 'json' | 'avro' | 'protobuf';
+  compression?: boolean;
+}
+
+// Encryption Types
+export interface EncryptionOptions {
+  algorithm: 'AES-256-GCM' | 'AES-128-GCM';
+  key: string;
+  fields?: string[];
 }

@@ -45,7 +45,7 @@ export class EncryptionManager {
     
     // Derive key if using key derivation
     let derivedKey = config.key;
-    if (config.keyDerivation) {
+    if (config.keyDerivation && config.key) {
       derivedKey = pbkdf2Sync(
         config.key,
         config.keyDerivation.salt,

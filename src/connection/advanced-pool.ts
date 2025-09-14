@@ -80,10 +80,14 @@ export class AdvancedConnectionPool extends EventEmitter {
         threshold: 3,
         cooldown: 60000
       },
-      ...options,
-      healthCheck: { ...options.healthCheck },
-      retryPolicy: { ...options.retryPolicy },
-      failover: { ...options.failover }
+      ...options
+    };
+    
+    this.options = {
+      ...defaultOptions,
+      healthCheck: { ...defaultOptions.healthCheck, ...options.healthCheck },
+      retryPolicy: { ...defaultOptions.retryPolicy, ...options.retryPolicy },
+      failover: { ...defaultOptions.failover, ...options.failover }
     };
   }
 
@@ -276,7 +280,7 @@ export class AdvancedConnectionPool extends EventEmitter {
 
   async executeWithRetry<T>(
     operation: (client: Client) => Promise<T>,
-    retries: number = this.options.retryPolicy.maxRetries
+    retries: number = this.options.retryPolicy?.maxRetries || 3
   ): Promise<T> {
     let lastError: Error;
 
@@ -319,17 +323,18 @@ export class AdvancedConnectionPool extends EventEmitter {
   }
 
   private calculateRetryDelay(attempt: number): number {
-    const { backoff, baseDelay, maxDelay } = this.options.retryPolicy;
+    const { backoff, baseDelay, maxDelay } = this.options.retryPolicy || {};
     
-    let delay = baseDelay;
+    const base = baseDelay || 1000;
+    let delay = base;
     
     if (backoff === 'exponential') {
-      delay = baseDelay * Math.pow(2, attempt);
+      delay = base * Math.pow(2, attempt);
     } else {
-      delay = baseDelay * (attempt + 1);
+      delay = base * (attempt + 1);
     }
     
-    return Math.min(delay, maxDelay);
+    return Math.min(delay, maxDelay || 30000);
   }
 
   private sleep(ms: number): Promise<void> {

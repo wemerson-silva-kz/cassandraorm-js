@@ -308,7 +308,7 @@ export function Hook(event: string) {
     descriptor.value = async function (...args: any[]) {
       const context: HookContext = {
         operation: event as any,
-        tableName: this.constructor.tableName || this.constructor.name.toLowerCase(),
+        tableName: (this.constructor as any).tableName || this.constructor.name.toLowerCase(),
         modelName: this.constructor.name
       };
 

@@ -1,7 +1,7 @@
 import { readdir } from 'fs/promises';
 import { join, extname } from 'path';
-import type { ModelSchema } from '../types.js';
-import type { CassandraClient } from '../client.js';
+import type { ModelSchema } from '../core/types.js';
+import type { CassandraClient } from '../core/client.js';
 
 export interface ModelFile {
   name: string;

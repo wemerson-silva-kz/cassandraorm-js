@@ -124,7 +124,7 @@ export class Tracer extends EventEmitter {
       },
       maxSpans: 10000,
       ...config,
-      jaeger: { ...config.jaeger }
+      jaeger: { ...defaultConfig.jaeger, ...config.jaeger }
     };
   }
 

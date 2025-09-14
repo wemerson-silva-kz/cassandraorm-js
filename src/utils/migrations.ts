@@ -78,9 +78,9 @@ class CassandraSchemaBuilder implements SchemaBuilder {
     return new CassandraTableBuilder(this.client, this.keyspace, tableName, 'CREATE');
   }
 
-  dropTable(tableName: string): Promise<void> {
+  async dropTable(tableName: string): Promise<void> {
     const query = `DROP TABLE IF EXISTS ${this.getTableName(tableName)}`;
-    return this.client.execute(query);
+    await this.client.execute(query);
   }
 
   alterTable(tableName: string): TableBuilder {
@@ -132,6 +132,33 @@ class CassandraSchemaBuilder implements SchemaBuilder {
   }
 }
 
+class CassandraColumnBuilder implements ColumnBuilder {
+  constructor(
+    private tableBuilder: CassandraTableBuilder,
+    private columnName: string
+  ) {}
+
+  primaryKey(): ColumnBuilder {
+    this.tableBuilder.primaryKey([this.columnName]);
+    return this;
+  }
+
+  static(): ColumnBuilder {
+    // Cassandra doesn't have static columns in the same way
+    return this;
+  }
+
+  notNull(): ColumnBuilder {
+    // Cassandra handles null constraints differently
+    return this;
+  }
+
+  default(value: any): ColumnBuilder {
+    // Cassandra doesn't support default values
+    return this;
+  }
+}
+
 class CassandraTableBuilder implements TableBuilder {
   private columns: string[] = [];
   private primaryKeyColumns: string[] = [];
@@ -146,63 +173,78 @@ class CassandraTableBuilder implements TableBuilder {
   ) {}
 
   uuid(columnName: string): ColumnBuilder {
-    return this.addColumn(columnName, 'uuid');
+    this.addColumn(columnName, 'uuid');
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   text(columnName: string): ColumnBuilder {
-    return this.addColumn(columnName, 'text');
+    this.addColumn(columnName, 'text');
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   int(columnName: string): ColumnBuilder {
-    return this.addColumn(columnName, 'int');
+    this.addColumn(columnName, 'int');
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   bigint(columnName: string): ColumnBuilder {
-    return this.addColumn(columnName, 'bigint');
+    this.addColumn(columnName, 'bigint');
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   float(columnName: string): ColumnBuilder {
-    return this.addColumn(columnName, 'float');
+    this.addColumn(columnName, 'float');
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   double(columnName: string): ColumnBuilder {
-    return this.addColumn(columnName, 'double');
+    this.addColumn(columnName, 'double');
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   boolean(columnName: string): ColumnBuilder {
-    return this.addColumn(columnName, 'boolean');
+    this.addColumn(columnName, 'boolean');
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   timestamp(columnName: string): ColumnBuilder {
-    return this.addColumn(columnName, 'timestamp');
+    this.addColumn(columnName, 'timestamp');
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   date(columnName: string): ColumnBuilder {
-    return this.addColumn(columnName, 'date');
+    this.addColumn(columnName, 'date');
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   time(columnName: string): ColumnBuilder {
-    return this.addColumn(columnName, 'time');
+    this.addColumn(columnName, 'time');
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   blob(columnName: string): ColumnBuilder {
-    return this.addColumn(columnName, 'blob');
+    this.addColumn(columnName, 'blob');
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   list(columnName: string, type: string): ColumnBuilder {
-    return this.addColumn(columnName, `list<${type}>`);
+    this.addColumn(columnName, `list<${type}>`);
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   set(columnName: string, type: string): ColumnBuilder {
-    return this.addColumn(columnName, `set<${type}>`);
+    this.addColumn(columnName, `set<${type}>`);
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   map(columnName: string, keyType: string, valueType: string): ColumnBuilder {
-    return this.addColumn(columnName, `map<${keyType}, ${valueType}>`);
+    this.addColumn(columnName, `map<${keyType}, ${valueType}>`);
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   counter(columnName: string): ColumnBuilder {
-    return this.addColumn(columnName, 'counter');
+    this.addColumn(columnName, 'counter');
+    return new CassandraColumnBuilder(this, columnName);
   }
 
   primaryKey(columns: string | string[]): TableBuilder {
@@ -306,41 +348,7 @@ class CassandraTableBuilder implements TableBuilder {
   }
 }
 
-class CassandraColumnBuilder implements ColumnBuilder {
-  private modifiers: string[] = [];
-  public onFinalize?: (columnDef: string) => void;
-
-  constructor(private columnName: string, private type: string) {
-    // Auto-finalize when no more methods are chained
-    setTimeout(() => this.finalize(), 0);
-  }
-
-  primaryKey(): ColumnBuilder {
-    this.modifiers.push('PRIMARY KEY');
-    return this;
-  }
-
-  static(): ColumnBuilder {
-    this.modifiers.push('STATIC');
-    return this;
-  }
-
-  notNull(): ColumnBuilder {
-    // Cassandra doesn't have NOT NULL, but we can track it for validation
-    return this;
-  }
-
-  default(value: any): ColumnBuilder {
-    // Cassandra doesn't support DEFAULT values in column definitions
-    // This would need to be handled at the application level
-    return this;
-  }
-
-  private finalize(): void {
-    const columnDef = `${this.columnName} ${this.type}${this.modifiers.length > 0 ? ' ' + this.modifiers.join(' ') : ''}`;
-    this.onFinalize?.(columnDef);
-  }
-}
+// Removed duplicate CassandraColumnBuilder class
 
 export class MigrationManager {
   private migrationsPath: string;

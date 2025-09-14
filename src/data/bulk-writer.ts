@@ -1,5 +1,5 @@
 import type { Client } from "cassandra-driver";
-import type { UniqueConstraintManager } from "./unique-constraints.js";
+import type { UniqueConstraintManager } from "../validation/unique-constraints.js";
 
 export interface BulkWriterOptions {
   batchSize?: number;

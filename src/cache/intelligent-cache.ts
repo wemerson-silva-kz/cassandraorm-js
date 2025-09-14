@@ -147,7 +147,9 @@ export class IntelligentCache {
         keyToEvict = this.accessOrder[0];
     }
 
-    this.cache.delete(keyToEvict);
+    if (keyToEvict) {
+      this.cache.delete(keyToEvict);
+    }
     this.removeFromAccessOrder(keyToEvict);
   }
 
