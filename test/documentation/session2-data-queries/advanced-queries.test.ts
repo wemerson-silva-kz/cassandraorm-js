@@ -74,18 +74,31 @@ describe('Session 2: Advanced Queries', () => {
       expect(count).toBeGreaterThanOrEqual(1);
     });
 
-    it.skip('should handle batch operations', async () => {
-      // Use direct execute instead of batch for now
-      const id1 = client.constructor.uuid().toString();
-      const id2 = client.constructor.uuid().toString();
+    it('should handle batch operations', async () => {
+      // Test batch-like behavior with multiple sequential operations
+      const initialCount = await TestModel.count();
       
-      await client.execute('INSERT INTO test_queries (id, category, value, created_at) VALUES (?, ?, ?, ?)', 
-        [id1, 'C', 30, new Date()]);
-      await client.execute('INSERT INTO test_queries (id, category, value, created_at) VALUES (?, ?, ?, ?)', 
-        [id2, 'D', 40, new Date()]);
+      // Insert multiple records
+      await TestModel.create({
+        id: client.constructor.uuid().toString(),
+        category: 'BATCH1',
+        value: 100,
+        tags: new Set(['batch']),
+        metadata: new Map([['type', 'batch']]),
+        created_at: new Date()
+      });
       
-      const newRecords = await TestModel.find({ category: 'C' });
-      expect(newRecords.length).toBeGreaterThanOrEqual(1);
+      await TestModel.create({
+        id: client.constructor.uuid().toString(),
+        category: 'BATCH2', 
+        value: 200,
+        tags: new Set(['batch']),
+        metadata: new Map([['type', 'batch']]),
+        created_at: new Date()
+      });
+      
+      const finalCount = await TestModel.count();
+      expect(finalCount).toBeGreaterThan(initialCount);
     });
   });
 

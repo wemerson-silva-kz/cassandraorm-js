@@ -29,10 +29,15 @@ describe('Session 1: Performance Monitoring', () => {
     });
   });
 
-  // TODO: Implement connection metrics
-  describe.skip('Connection Metrics', () => {
+  describe('Connection Metrics', () => {
     it('should provide connection statistics', async () => {
-      // This test is skipped until connection metrics are implemented
+      const state = client.getConnectionState();
+      expect(state).toBeDefined();
+      expect(typeof state.connected).toBe('boolean');
+      expect(typeof state.hosts).toBe('number');
+      expect(typeof state.queryCount).toBe('number');
+      expect(typeof state.avgQueryTime).toBe('number');
+      expect(typeof state.errorRate).toBe('number');
     });
   });
 

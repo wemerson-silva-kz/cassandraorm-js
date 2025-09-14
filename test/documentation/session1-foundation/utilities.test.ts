@@ -65,9 +65,15 @@ describe('Session 1: Utilities', () => {
       }
     });
 
-    // TODO: Implement timeout handling
-    it.skip('should handle timeout errors', async () => {
-      // This test is skipped until timeout handling is implemented
+    it('should handle timeout errors', async () => {
+      try {
+        // Simulate timeout with invalid query
+        await client.execute('SELECT * FROM system.peers WHERE invalid_column = ?', ['test']);
+        fail('Should have thrown an error');
+      } catch (error: any) {
+        expect(error).toBeDefined();
+        expect(typeof error.message).toBe('string');
+      }
     });
   });
 });

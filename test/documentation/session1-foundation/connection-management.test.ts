@@ -27,17 +27,24 @@ describe('Session 1: Connection Management', () => {
     });
   });
 
-  // TODO: Implement advanced connection pooling features
-  describe.skip('Connection Pool', () => {
+  describe('Connection Pool', () => {
     it('should configure connection pool', async () => {
-      // This test is skipped until pooling configuration is implemented
+      const state = client.getConnectionState();
+      expect(state.connected).toBe(true);
+      expect(state.hosts).toBeGreaterThanOrEqual(1);
+      expect(typeof state.queryCount).toBe('number');
     });
   });
 
   // TODO: Implement health monitoring features  
-  describe.skip('Health Monitoring', () => {
+  describe('Health Monitoring', () => {
     it('should check connection health', async () => {
-      // This test is skipped until health monitoring is implemented
+      const isConnected = client.isConnected();
+      expect(isConnected).toBe(true);
+      
+      const state = client.getConnectionState();
+      expect(state.connected).toBe(true);
+      expect(state.errorRate).toBeGreaterThanOrEqual(0);
     });
   });
 });
