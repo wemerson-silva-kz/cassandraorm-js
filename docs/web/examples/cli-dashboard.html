@@ -48,6 +48,7 @@ cassandraorm monitor --metrics --logs --performance</code></pre>
             <div class="example-section">
                 <h2>📋 Dashboard Server Implementation</h2>
                 <pre><code class="language-javascript">import { 
+  createClient,
   DashboardServer,
   MetricsCollector,
   PerformanceMonitor,
@@ -55,6 +56,21 @@ cassandraorm monitor --metrics --logs --performance</code></pre>
 } from 'cassandraorm-js/dashboard';
 import express from 'express';
 import { WebSocketServer } from 'ws';
+
+// Initialize Cassandra client
+const client = createClient({
+  clientOptions: {
+    contactPoints: ['127.0.0.1'],
+    localDataCenter: 'datacenter1',
+    keyspace: 'dashboard_app'
+  },
+  ormOptions: {
+    createKeyspace: true,
+    migration: 'safe'
+  }
+});
+
+await client.connect();
 
 // Initialize dashboard server
 const dashboard = new DashboardServer({
@@ -104,18 +120,32 @@ const logAggregator = new LogAggregator({
 });
 
 // Start dashboard
-await dashboard.start();</code></pre>
+await dashboard.start();
+
+// Initialize Express app and WebSocket server
+const app = express();
+const server = require('http').createServer(app);
+const wss = new WebSocketServer({ server });
+
+// Initialize dashboard API
+const dashboardAPI = new DashboardAPI(app, wss, metrics, perfMonitor, logAggregator);
+
+// Start server
+server.listen(3000, () => {
+  console.log('Dashboard running on http://localhost:3000');
+});</code></pre>
             </div>
 
             <div class="example-section">
                 <h2>📊 Real-time Metrics Dashboard</h2>
                 <pre><code class="language-javascript">// Dashboard routes and WebSocket handlers
 class DashboardAPI {
-  constructor(app, wss, metrics, perfMonitor) {
+  constructor(app, wss, metrics, perfMonitor, logAggregator) {
     this.app = app;
     this.wss = wss;
     this.metrics = metrics;
     this.perfMonitor = perfMonitor;
+    this.logAggregator = logAggregator;
     this.setupRoutes();
     this.setupWebSocket();
   }
@@ -241,7 +271,7 @@ class DashboardAPI {
   }
 
   async sendLogsUpdate(ws) {
-    const recentLogs = await logAggregator.getRecentLogs(50);
+    const recentLogs = await this.logAggregator.getRecentLogs(50);
     
     ws.send(JSON.stringify({
       type: 'logs_update',
