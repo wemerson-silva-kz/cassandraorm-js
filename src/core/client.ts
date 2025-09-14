@@ -36,12 +36,19 @@ export class CassandraClient {
   }
 
   async connect(): Promise<void> {
-    // Conexão simples para testes
     const clientOptions = { ...this.options.clientOptions };
     const keyspace = clientOptions.keyspace;
     delete clientOptions.keyspace;
     
-    this.client = new Client(clientOptions);
+    // Add basic connection pool settings
+    const poolOptions = {
+      ...clientOptions,
+      pooling: {
+        coreConnectionsPerHost: { '0': 2, '1': 1 }
+      }
+    };
+    
+    this.client = new Client(poolOptions);
     await this.client.connect();
     
     // Create keyspace if requested
@@ -63,7 +70,7 @@ export class CassandraClient {
     
     this.connected = true;
     
-    // Initialize only essential features for tests
+    // Initialize essential features
     if (keyspace) {
       await this.initializeEssentialFeatures();
     }
@@ -170,6 +177,10 @@ export class CassandraClient {
       });
       throw error;
     }
+  }
+
+  createBatch(): BatchBuilder {
+    return new BatchBuilder(this);
   }
 
   async batch(queries: Array<{ query: string; params: any[] }>, options: QueryOptions = {}): Promise<any> {
