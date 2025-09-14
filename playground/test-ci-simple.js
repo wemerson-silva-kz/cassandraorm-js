@@ -1,4 +1,4 @@
-import { createClient } from './dist/index.js';
+import { createClient } from '../dist/index.js';
 
 console.log('🔄 Running CI tests...');
 

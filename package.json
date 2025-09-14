@@ -43,10 +43,10 @@
   },
   "homepage": "https://github.com/wemerson-silva-kz/cassandraorm-js#readme",
   "scripts": {
-    "test": "node test-ci-simple.js",
+    "test": "node playground/test-ci-simple.js",
     "test:full": "bun test",
     "test:integration": "bun run tests/integration.test.ts",
-    "test:ci": "node test-ci-simple.js",
+    "test:ci": "node playground/test-ci-simple.js",
     "build": "bun build src/index.ts --outdir dist --target node && cp types.d.ts dist/index.d.ts 2>/dev/null || echo 'Using embedded types...'",
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
     "build:full": "npm run clean && npm run build && npm run build:types",
