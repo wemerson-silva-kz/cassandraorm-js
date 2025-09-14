@@ -201,22 +201,51 @@ export class CassandraClient {
   async batch(queries: Array<{ query: string; params: any[] }>, options: QueryOptions = {}): Promise<any> {
     if (!this.client) throw new Error('Client not connected');
     
-    // Process parameters for each query
-    const processedQueries = queries.map(({ query, params }) => ({
-      query,
-      params: params.map(param => {
-        if (param instanceof Set) {
-          return Array.from(param);
-        }
-        if (param instanceof Map) {
-          return Object.fromEntries(param);
-        }
-        return param;
-      })
-    }));
+    const startTime = Date.now();
     
-    const result = await this.client.batch(processedQueries, options as any);
-    return result;
+    try {
+      // Process parameters for each query
+      const processedQueries = queries.map(({ query, params }) => ({
+        query,
+        params: params.map(param => {
+          if (param instanceof Set) {
+            return Array.from(param);
+          }
+          if (param instanceof Map) {
+            return Object.fromEntries(param);
+          }
+          // Handle UUID strings properly
+          if (typeof param === 'string' && param.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            return types.Uuid.fromString(param);
+          }
+          return param;
+        })
+      }));
+      
+      const result = await this.client.batch(processedQueries, { 
+        prepare: true,
+        ...options 
+      });
+      
+      // Track metrics
+      const duration = Date.now() - startTime;
+      this.queryMetrics.push({
+        query: `BATCH (${queries.length} queries)`,
+        duration,
+        timestamp: new Date()
+      });
+      
+      return result;
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      this.queryMetrics.push({
+        query: `BATCH (${queries.length} queries)`,
+        duration,
+        timestamp: new Date(),
+        error: error.message
+      });
+      throw error;
+    }
   }
 
   async loadSchema(tableName: string, schema: ModelSchema): Promise<any> {

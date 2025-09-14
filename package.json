@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node --format esm",
-    "test": "node playground/test-ci-simple.js",
+    "test": "jest",
     "test:full": "bun test",
     "test:playground": "bun run ./playground/run-all-tests.ts",
     "test:quick": "bun run ./playground/test-quick.ts",
