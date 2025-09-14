@@ -322,7 +322,7 @@ export class RelationsManager {
       }
 
       const result = await this.populate(
-        (record.constructor as any).name,
+        (record as any).constructor?.name || 'unknown',
         [record],
         relationName
       );

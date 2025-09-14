@@ -3,7 +3,7 @@ import { CassandraClient } from "./core/client.js";
 import type { CassandraClientOptions } from "./core/types.js";
 
 // Core exports
-export { BaseModel, CassandraClient } from "./core/client.js";
+export { BaseModel, CassandraClient, BatchBuilder } from "./core/client.js";
 export { CassandraORM } from "./core/orm.js";
 
 // Cassandra Types
@@ -47,12 +47,20 @@ export { Tracer, Span } from './observability/tracing.js';
 export { HooksManager } from './middleware/hooks-middleware.js';
 export { MultiTenantManager } from './middleware/multi-tenant.js';
 
-// Integrations
+// Integrations - AI/ML
+export { AIMLManager, SemanticCache as AISemanticCache } from './integrations/ai-ml.js';
+
+// Integrations - Event Sourcing
+export { EventStore, BaseAggregateRoot, AggregateRepository } from './integrations/event-sourcing.js';
+
+// Integrations - Distributed Transactions
+export { DistributedTransactionManager, SagaOrchestrator } from './integrations/distributed-transactions.js';
+
+// Integrations - Real-time Subscriptions
+export { SubscriptionManager, WebSocketSubscriptionServer } from './integrations/subscriptions.js';
+
+// Integrations - GraphQL
 export { GraphQLSchemaGenerator, CassandraDataSource } from './integrations/graphql.js';
-export { EventStore, BaseAggregateRoot, AggregateRepository, SagaManager } from './integrations/event-sourcing.js';
-export { DistributedTransactionManager, CassandraParticipant, TransactionCoordinator, SagaOrchestrator } from './integrations/distributed-transactions.js';
-export { SubscriptionManager } from './integrations/subscriptions.js';
-export { AIMLManager } from './integrations/ai-ml.js';
 
 // Performance and monitoring
 export { PerformanceProfiler } from './observability/performance-profiler.js';
@@ -98,10 +106,7 @@ export type {
   UUID,
   Model,
   
-  // Cassandra Data Types
-  CassandraDataType,
-  CassandraFieldDefinition,
-  CassandraModelSchema,
+
   
   // Cache types
   CacheOptions,
@@ -150,12 +155,9 @@ export type {
   
   // Distributed transactions
   TransactionConfig,
-  TransactionStatus,
   
   // Subscriptions
   SubscriptionConfig,
-  SubscriptionFilter,
-  SubscriptionEvent,
   
   // AI/ML
   VectorSearchOptions,
@@ -164,18 +166,6 @@ export type {
   // Performance
   MetricsConfig,
   TracingConfig,
-  
-  // Transactions
-  TransactionConfig,
-  TransactionOperation,
-  
-  // Subscriptions
-  SubscriptionConfig,
-  Subscription,
-  
-  // AI/ML
-  AIConfig,
-  VectorSearchOptions,
   
   // Import/Export
   ImportOptions,

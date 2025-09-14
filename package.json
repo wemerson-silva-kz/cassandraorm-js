@@ -22,6 +22,14 @@
     "test:graphql": "bun run ./playground/15-graphql-integration.test.ts",
     "test:performance": "bun run ./playground/16-performance-monitoring.test.ts",
     "test:integration": "bun run ./playground/17-complete-integration.test.ts",
+    "test:docs": "ts-node test/documentation/run-all-tests.ts",
+    "test:docs:session1": "jest test/documentation/session1-foundation --verbose",
+    "test:docs:session2": "jest test/documentation/session2-data-queries --verbose",
+    "test:docs:session3": "jest test/documentation/session3-middleware --verbose",
+    "test:docs:session4": "jest test/documentation/session4-ai-realtime --verbose",
+    "test:docs:session5": "jest test/documentation/session5-distributed --verbose",
+    "test:docs:session6": "jest test/documentation/session6-integrations --verbose",
+    "test:docs:examples": "jest test/documentation/session6-integrations/examples.test.ts --verbose",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -55,7 +63,11 @@
     "cassandra-driver": "^4.7.2"
   },
   "devDependencies": {
+    "@jest/globals": "^30.1.2",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",
+    "jest": "^30.1.3",
+    "ts-jest": "^29.4.1",
     "typescript": "^5.0.0"
   },
   "engines": {

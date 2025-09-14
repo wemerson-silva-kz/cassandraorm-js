@@ -5,6 +5,72 @@ import type {
   CassandraModelSchema 
 } from './cassandra-types.js';
 
+// Transaction types
+export enum TransactionStatus {
+  PENDING = 'pending',
+  COMMITTED = 'committed',
+  ABORTED = 'aborted',
+  FAILED = 'failed'
+}
+
+export interface TransactionConfig {
+  timeout?: number;
+  consistency?: string;
+  retries?: number;
+}
+
+// Subscription types
+export interface SubscriptionConfig {
+  table: string;
+  operations?: ('insert' | 'update' | 'delete')[];
+  filter?: SubscriptionFilter;
+}
+
+export interface SubscriptionFilter {
+  where?: Record<string, any>;
+  columns?: string[];
+}
+
+export interface SubscriptionEvent {
+  operation: 'insert' | 'update' | 'delete';
+  table: string;
+  data: any;
+  timestamp: Date;
+}
+
+export interface Subscription {
+  id: string;
+  config: SubscriptionConfig;
+  callback: (event: SubscriptionEvent) => void;
+}
+
+// AI/ML types
+export interface VectorSearchOptions {
+  limit?: number;
+  threshold?: number;
+  includeDistance?: boolean;
+}
+
+export interface AIConfig {
+  provider: 'openai' | 'huggingface' | 'custom';
+  apiKey?: string;
+  model?: string;
+  endpoint?: string;
+}
+
+// Performance monitoring types
+export interface MetricsConfig {
+  enabled: boolean;
+  interval?: number;
+  retention?: number;
+}
+
+export interface TracingConfig {
+  enabled: boolean;
+  sampleRate?: number;
+  endpoint?: string;
+}
+
 export interface CassandraClientOptions {
   clientOptions: {
     contactPoints: string[];

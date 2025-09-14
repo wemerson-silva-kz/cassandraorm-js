@@ -141,7 +141,7 @@ export class IntelligentCache {
         keyToEvict = this.findLFUKey();
         break;
       case 'fifo':
-        keyToEvict = this.cache.keys().next().value;
+        keyToEvict = this.cache.keys().next().value || '';
         break;
       default:
         keyToEvict = this.accessOrder[0];

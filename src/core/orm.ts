@@ -43,7 +43,7 @@ export class CassandraORM {
     this.client = await this.connectionPool.getConnection(this.keyspace);
     this.monitor.recordConnection('connect');
     
-    this.migrationManager = new MigrationManager(this.client, this.options.migrationsPath || './migrations');
+    this.migrationManager = new MigrationManager(this.client, { keyspace: this.keyspace });
     this.uniqueManager = new UniqueConstraintManager(this.client, this.keyspace || '');
     
     await this.pluginManager.executeHook('afterConnect', { client: this.client });

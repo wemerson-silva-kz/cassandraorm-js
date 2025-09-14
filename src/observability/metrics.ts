@@ -32,7 +32,7 @@ export class MetricsCollector extends EventEmitter {
 
   constructor(config: MetricsConfig = {}) {
     super();
-    this.config = {
+    const defaultConfig = {
       enabled: true,
       prometheus: {
         enabled: false,
@@ -40,7 +40,11 @@ export class MetricsCollector extends EventEmitter {
         endpoint: '/metrics'
       },
       customMetrics: [],
-      retention: 3600, // 1 hour
+      retention: 3600 // 1 hour
+    };
+
+    this.config = {
+      ...defaultConfig,
       ...config,
       prometheus: { ...defaultConfig.prometheus, ...config.prometheus }
     };

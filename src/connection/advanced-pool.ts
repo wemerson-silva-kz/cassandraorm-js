@@ -58,11 +58,11 @@ export class AdvancedConnectionPool extends EventEmitter {
   ) {
     super();
     
-    this.options = {
+    const defaultOptions = {
       size: 5,
       maxSize: 20,
       minSize: 2,
-      loadBalancing: 'round-robin',
+      loadBalancing: 'round-robin' as const,
       healthCheck: {
         enabled: true,
         interval: 30000,
@@ -71,7 +71,7 @@ export class AdvancedConnectionPool extends EventEmitter {
       },
       retryPolicy: {
         maxRetries: 3,
-        backoff: 'exponential',
+        backoff: 'exponential' as const,
         baseDelay: 1000,
         maxDelay: 10000
       },
@@ -79,12 +79,12 @@ export class AdvancedConnectionPool extends EventEmitter {
         enabled: true,
         threshold: 3,
         cooldown: 60000
-      },
-      ...options
+      }
     };
     
     this.options = {
       ...defaultOptions,
+      ...options,
       healthCheck: { ...defaultOptions.healthCheck, ...options.healthCheck },
       retryPolicy: { ...defaultOptions.retryPolicy, ...options.retryPolicy },
       failover: { ...defaultOptions.failover, ...options.failover }

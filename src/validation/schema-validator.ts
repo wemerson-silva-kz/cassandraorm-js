@@ -1,14 +1,13 @@
 export interface ValidationRule {
   required?: boolean;
-  min?: number;
-  max?: number;
+  type?: string;
   minLength?: number;
   maxLength?: number;
+  min?: number;
+  max?: number;
   pattern?: RegExp;
   isEmail?: boolean;
-  isUUID?: boolean;
   custom?: (value: any) => boolean | string;
-  enum?: any[];
 }
 
 export interface ValidationError {
@@ -18,141 +17,112 @@ export interface ValidationError {
 }
 
 export class SchemaValidator {
-  private static emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  private static uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  private schema: Record<string, ValidationRule>;
 
-  static validate(data: Record<string, any>, schema: Record<string, any>): ValidationError[] {
+  constructor(schema: Record<string, ValidationRule>) {
+    this.schema = schema;
+  }
+
+  validate(data: Record<string, any>): ValidationError[] {
     const errors: ValidationError[] = [];
 
-    for (const [fieldName, fieldDef] of Object.entries(schema.fields)) {
-      const value = data[fieldName];
-      const rules = this.extractValidationRules(fieldDef);
-      
-      if (!rules) continue;
-
-      const fieldErrors = this.validateField(fieldName, value, rules);
+    for (const [field, rule] of Object.entries(this.schema)) {
+      const value = data[field];
+      const fieldErrors = this.validateField(field, value, rule);
       errors.push(...fieldErrors);
     }
 
     return errors;
   }
 
-  private static extractValidationRules(fieldDef: any): ValidationRule | null {
-    if (typeof fieldDef === 'string') return null;
-    return fieldDef.validate || null;
-  }
-
-  private static validateField(fieldName: string, value: any, rules: ValidationRule): ValidationError[] {
+  private validateField(field: string, value: any, rule: ValidationRule): ValidationError[] {
     const errors: ValidationError[] = [];
 
     // Required validation
-    if (rules.required && (value === undefined || value === null || value === '')) {
-      errors.push({
-        field: fieldName,
-        message: `${fieldName} is required`,
-        value
-      });
-      return errors; // Stop validation if required field is missing
+    if (rule.required && (value === undefined || value === null || value === '')) {
+      errors.push({ field, message: `${field} is required`, value });
+      return errors; // Skip other validations if required field is missing
     }
 
-    // Skip other validations if value is empty and not required
-    if (value === undefined || value === null || value === '') {
+    // Skip other validations if value is not provided and not required
+    if (value === undefined || value === null) {
       return errors;
     }
 
-    // Type-specific validations
+    // Type validation
+    if (rule.type) {
+      if (!this.validateType(value, rule.type)) {
+        errors.push({ field, message: `${field} must be of type ${rule.type}`, value });
+      }
+    }
+
+    // String validations
     if (typeof value === 'string') {
-      // String length validations
-      if (rules.minLength && value.length < rules.minLength) {
-        errors.push({
-          field: fieldName,
-          message: `${fieldName} must be at least ${rules.minLength} characters`,
-          value
-        });
+      if (rule.minLength && value.length < rule.minLength) {
+        errors.push({ field, message: `${field} must be at least ${rule.minLength} characters`, value });
       }
-
-      if (rules.maxLength && value.length > rules.maxLength) {
-        errors.push({
-          field: fieldName,
-          message: `${fieldName} must be at most ${rules.maxLength} characters`,
-          value
-        });
+      if (rule.maxLength && value.length > rule.maxLength) {
+        errors.push({ field, message: `${field} must be at most ${rule.maxLength} characters`, value });
       }
-
-      // Pattern validation
-      if (rules.pattern && !rules.pattern.test(value)) {
-        errors.push({
-          field: fieldName,
-          message: `${fieldName} format is invalid`,
-          value
-        });
+      if (rule.pattern && !rule.pattern.test(value)) {
+        errors.push({ field, message: `${field} format is invalid`, value });
       }
-
-      // Email validation
-      if (rules.isEmail && !this.emailRegex.test(value)) {
-        errors.push({
-          field: fieldName,
-          message: `${fieldName} must be a valid email`,
-          value
-        });
-      }
-
-      // UUID validation
-      if (rules.isUUID && !this.uuidRegex.test(value)) {
-        errors.push({
-          field: fieldName,
-          message: `${fieldName} must be a valid UUID`,
-          value
-        });
+      if (rule.isEmail && !this.isValidEmail(value)) {
+        errors.push({ field, message: `${field} must be a valid email`, value });
       }
     }
 
-    // Numeric validations
+    // Number validations
     if (typeof value === 'number') {
-      if (rules.min !== undefined && value < rules.min) {
-        errors.push({
-          field: fieldName,
-          message: `${fieldName} must be at least ${rules.min}`,
-          value
-        });
+      if (rule.min !== undefined && value < rule.min) {
+        errors.push({ field, message: `${field} must be at least ${rule.min}`, value });
       }
-
-      if (rules.max !== undefined && value > rules.max) {
-        errors.push({
-          field: fieldName,
-          message: `${fieldName} must be at most ${rules.max}`,
-          value
-        });
+      if (rule.max !== undefined && value > rule.max) {
+        errors.push({ field, message: `${field} must be at most ${rule.max}`, value });
       }
-    }
-
-    // Enum validation
-    if (rules.enum && !rules.enum.includes(value)) {
-      errors.push({
-        field: fieldName,
-        message: `${fieldName} must be one of: ${rules.enum.join(', ')}`,
-        value
-      });
     }
 
     // Custom validation
-    if (rules.custom) {
-      const customResult = rules.custom(value);
+    if (rule.custom) {
+      const customResult = rule.custom(value);
       if (customResult !== true) {
-        errors.push({
-          field: fieldName,
-          message: typeof customResult === 'string' ? customResult : `${fieldName} is invalid`,
-          value
-        });
+        const message = typeof customResult === 'string' ? customResult : `${field} is invalid`;
+        errors.push({ field, message, value });
       }
     }
 
     return errors;
   }
 
-  static async validateAsync(data: Record<string, any>, schema: Record<string, any>): Promise<ValidationError[]> {
-    // For now, just call sync validation
-    // Can be extended for async validations like database uniqueness checks
-    return this.validate(data, schema);
+  private validateType(value: any, expectedType: string): boolean {
+    switch (expectedType) {
+      case 'string':
+      case 'text':
+        return typeof value === 'string';
+      case 'number':
+      case 'int':
+      case 'float':
+        return typeof value === 'number';
+      case 'boolean':
+        return typeof value === 'boolean';
+      case 'array':
+        return Array.isArray(value);
+      case 'object':
+        return typeof value === 'object' && value !== null && !Array.isArray(value);
+      case 'uuid':
+        return typeof value === 'string' && this.isValidUUID(value);
+      default:
+        return true; // Unknown types pass validation
+    }
+  }
+
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  private isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
   }
 }

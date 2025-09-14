@@ -115,14 +115,18 @@ export class Tracer extends EventEmitter {
 
   constructor(config: TracingConfig = {}) {
     super();
-    this.config = {
+    const defaultConfig = {
       enabled: true,
       sampleRate: 1.0,
       jaeger: {
         endpoint: 'http://localhost:14268/api/traces',
         serviceName: 'cassandra-orm'
       },
-      maxSpans: 10000,
+      maxSpans: 10000
+    };
+
+    this.config = {
+      ...defaultConfig,
       ...config,
       jaeger: { ...defaultConfig.jaeger, ...config.jaeger }
     };
