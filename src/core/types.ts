@@ -1,4 +1,9 @@
 import { Client, types } from "cassandra-driver";
+import type { 
+  CassandraDataType, 
+  CassandraFieldDefinition, 
+  CassandraModelSchema 
+} from './cassandra-types.js';
 
 export interface CassandraClientOptions {
   clientOptions: {
@@ -30,6 +35,7 @@ export interface FieldDefinition {
     min?: number;
     max?: number;
     pattern?: RegExp;
+    custom?: (value: any) => boolean | string;
   };
 }
 
@@ -51,6 +57,13 @@ export interface ModelSchema {
   before_delete?: (query: any, options: any) => boolean;
   after_delete?: (query: any, result: any) => void;
 }
+
+// Re-export Cassandra types for convenience
+export type { 
+  CassandraDataType, 
+  CassandraFieldDefinition, 
+  CassandraModelSchema 
+};
 
 export interface RelationDefinition {
   model: string;
@@ -110,6 +123,7 @@ export interface QueryOptions {
   ttl?: number;
   if_not_exist?: boolean;
   allow_filtering?: boolean;
+  limit?: number;
 }
 
 export interface FindQuery {

@@ -6,6 +6,14 @@ import type { CassandraClientOptions } from "./core/types.js";
 export { BaseModel, CassandraClient } from "./core/client.js";
 export { CassandraORM } from "./core/orm.js";
 
+// Cassandra Types
+export { CassandraTypes } from './core/cassandra-types.js';
+export type { 
+  CassandraDataType, 
+  CassandraFieldDefinition, 
+  CassandraModelSchema 
+} from './core/cassandra-types.js';
+
 // Connection management
 export { ConnectionPool } from "./connection/pool.js";
 export { AdvancedConnectionPool } from './connection/advanced-pool.js';
@@ -85,6 +93,11 @@ export type {
   UDTDefinition,
   UUID,
   Model,
+  
+  // Cassandra Data Types
+  CassandraDataType,
+  CassandraFieldDefinition,
+  CassandraModelSchema,
   
   // Cache types
   CacheOptions,

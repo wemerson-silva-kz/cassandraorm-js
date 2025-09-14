@@ -1,5 +1,7 @@
 import { Client, types } from "cassandra-driver";
 import { Readable } from "node:stream";
+import { TypeConverter } from "./type-converter.js";
+import type { CassandraDataType } from "./cassandra-types.js";
 import type {
   BaseModelInstance,
   BatchQuery,
@@ -885,6 +887,8 @@ export class CassandraClient {
 
         if (query.$limit) {
           cqlQuery += ` LIMIT ${query.$limit}`;
+        } else if (finalOptions.limit) {
+          cqlQuery += ` LIMIT ${finalOptions.limit}`;
         }
 
         if (finalOptions.allow_filtering) {
@@ -923,10 +927,32 @@ export class CassandraClient {
         
         const fields = Object.keys(data);
         const placeholders = fields.map(() => '?').join(', ');
-        const values = Object.values(data);
+        
+        // Convert values using TypeConverter
+        const values = fields.map(field => {
+          const fieldDef = schema.fields[field];
+          const fieldType = typeof fieldDef === 'string' ? fieldDef : fieldDef?.type;
+          if (fieldType) {
+            return TypeConverter.convertValue(data[field], fieldType as CassandraDataType);
+          }
+          return data[field];
+        });
+        
+        // Build query with type hints for prepared statements
+        const typeHints = fields.map(field => {
+          const fieldDef = schema.fields[field];
+          const fieldType = typeof fieldDef === 'string' ? fieldDef : fieldDef?.type;
+          return TypeConverter.getParameterHint(fieldType as CassandraDataType);
+        }).filter(Boolean);
         
         const query = `INSERT INTO ${keyspace ? `"${keyspace}".` : ""}"${name}" (${fields.map(f => `"${f}"`).join(', ')}) VALUES (${placeholders})`;
-        await client.execute(query, values);
+        
+        const executeOptions = { 
+          prepare: true,
+          hints: typeHints.length > 0 ? typeHints : undefined
+        };
+        
+        await client.execute(query, values, executeOptions);
         
         const instance = new this(data);
         (instance as any).isNew = false;
