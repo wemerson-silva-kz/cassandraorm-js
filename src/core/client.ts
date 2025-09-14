@@ -31,6 +31,10 @@ export class CassandraClient {
 
   constructor(private options: CassandraClientOptions) {}
 
+  get driver() {
+    return this.client;
+  }
+
   async connect(): Promise<void> {
     // Conexão simples para testes
     const clientOptions = { ...this.options.clientOptions };
@@ -50,17 +54,17 @@ export class CassandraClient {
         }
       `;
       await this.client.execute(createKeyspaceQuery);
-      
-      // Reconnect to keyspace
-      await this.client.shutdown();
-      this.client = new Client(this.options.clientOptions);
-      await this.client.connect();
+    }
+    
+    // Use keyspace
+    if (keyspace) {
+      await this.client.execute(`USE ${keyspace}`);
     }
     
     this.connected = true;
     
     // Initialize only essential features for tests
-    if (this.options.clientOptions.keyspace) {
+    if (keyspace) {
       await this.initializeEssentialFeatures();
     }
   }
@@ -122,14 +126,6 @@ export class CassandraClient {
     
     const startTime = Date.now();
     try {
-      // Check semantic cache first
-      if (this.semanticCache && options.useCache !== false) {
-        const cached = await this.semanticCache.get(query, params);
-        if (cached) {
-          return cached;
-        }
-      }
-      
       // Convert JavaScript collections to Cassandra types
       const processedParams = params.map(param => {
         if (param instanceof Set) {
@@ -138,32 +134,15 @@ export class CassandraClient {
         if (param instanceof Map) {
           return Object.fromEntries(param);
         }
-        if (Array.isArray(param)) {
-          return param;
+        if (param && typeof param === 'object' && param.constructor === Object) {
+          // Convert plain objects to JSON string for text fields
+          return JSON.stringify(param);
         }
         return param;
       });
 
-      // Use prepared statements for better type handling
-      const executeOptions = {
-        ...options,
-        prepare: true
-      };
-      
-      const result = await this.client.execute(query, processedParams, executeOptions as any);
-      
-      // Ensure result has proper structure
-      const finalResult = {
-        rows: result?.rows || [],
-        rowLength: result?.rowLength || 0,
-        info: result?.info || null,
-        ...result
-      };
-      
-      // Cache result if semantic caching is enabled
-      if (this.semanticCache && options.useCache !== false) {
-        await this.semanticCache.set(query, params, finalResult);
-      }
+      // Execute directly with driver
+      const result = await this.client.execute(query, processedParams, options as any);
       
       // Performance monitoring
       const duration = Date.now() - startTime;
@@ -175,7 +154,7 @@ export class CassandraClient {
       });
       this.connectionMetrics.totalQueries++;
       
-      return finalResult;
+      return result;
     } catch (error) {
       const duration = Date.now() - startTime;
       this.queryMetrics.push({
@@ -252,6 +231,7 @@ export class CassandraClient {
       columns.push(`${fieldName} ${cqlType}`);
     }
     
+    // Since we use "USE keyspace", just use table name
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS ${tableName} (
         ${columns.join(', ')},
@@ -338,6 +318,11 @@ export class BaseModel {
     throw new Error('create method should be called on model instance, not BaseModel');
   }
 
+  private getFullTableName(): string {
+    // Since we use "USE keyspace", just return table name
+    return this.tableName;
+  }
+
   async save(data: any, options: any = {}): Promise<any> {
     // Validate data
     if (this.validator) {
@@ -349,7 +334,7 @@ export class BaseModel {
     
     const fields = Object.keys(data).join(', ');
     const placeholders = Object.keys(data).map(() => '?').join(', ');
-    const query = `INSERT INTO ${this.tableName} (${fields}) VALUES (${placeholders})`;
+    const query = `INSERT INTO ${this.getFullTableName()} (${fields}) VALUES (${placeholders})`;
     
     // Process values for Cassandra
     const params = Object.values(data).map(value => {
@@ -377,7 +362,10 @@ export class BaseModel {
     const whereClause = Object.keys(query).length > 0 
       ? 'WHERE ' + Object.keys(query).map(key => `${key} = ?`).join(' AND ')
       : '';
-    const cqlQuery = `SELECT * FROM ${this.tableName} ${whereClause} LIMIT 1`;
+    
+    // Add ALLOW FILTERING for non-key queries
+    const allowFiltering = Object.keys(query).length > 0 ? ' ALLOW FILTERING' : '';
+    const cqlQuery = `SELECT * FROM ${this.getFullTableName()} ${whereClause}${allowFiltering} LIMIT 1`;
     const params = Object.values(query);
     
     const result = await this.client.execute(cqlQuery, params, options);
@@ -388,7 +376,10 @@ export class BaseModel {
     const whereClause = Object.keys(query).length > 0 
       ? 'WHERE ' + Object.keys(query).map(key => `${key} = ?`).join(' AND ')
       : '';
-    const cqlQuery = `SELECT * FROM ${this.tableName} ${whereClause}`;
+    
+    // Add ALLOW FILTERING for non-key queries
+    const allowFiltering = Object.keys(query).length > 0 ? ' ALLOW FILTERING' : '';
+    const cqlQuery = `SELECT * FROM ${this.getFullTableName()} ${whereClause}${allowFiltering}`;
     const params = Object.values(query);
     
     const result = await this.client.execute(cqlQuery, params, { ...options, prepare: true });
@@ -423,7 +414,10 @@ export class BaseModel {
     const whereClause = Object.keys(query).length > 0 
       ? 'WHERE ' + Object.keys(query).map(key => `${key} = ?`).join(' AND ')
       : '';
-    const cqlQuery = `SELECT COUNT(*) FROM ${this.tableName} ${whereClause}`;
+    
+    // Add ALLOW FILTERING for non-key queries
+    const allowFiltering = Object.keys(query).length > 0 ? ' ALLOW FILTERING' : '';
+    const cqlQuery = `SELECT COUNT(*) FROM ${this.getFullTableName()} ${whereClause}${allowFiltering}`;
     const params = Object.values(query);
     
     const result = await this.client.execute(cqlQuery, params, { prepare: true });
