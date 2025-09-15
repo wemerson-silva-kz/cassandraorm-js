@@ -33,8 +33,10 @@
     "test:ai-ml": "jest test/ai-ml --verbose",
     "test:performance": "jest test/performance --verbose",
     "test:distributed": "jest test/distributed --verbose",
+    "test:ide-extensions": "jest test/ide-extensions --verbose",
     "test:enhanced": "jest test/core/enhanced-client.test.ts --verbose",
     "test:new-features": "jest test/ai-ml test/performance test/distributed test/core/enhanced-client.test.ts --verbose",
+    "test:all-features": "jest test/ai-ml test/performance test/distributed test/ide-extensions test/core/enhanced-client.test.ts --verbose",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
