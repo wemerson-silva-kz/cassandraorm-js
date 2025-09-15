@@ -110,10 +110,10 @@ describe('Session 6: Examples Validation', () => {
 
       // Create products
       const product1 = await Product.create({
-        id: 'prod-1',
+        id: client.uuid(),
         name: 'Laptop',
         description: 'High-performance laptop',
-        price: 999.99,
+        price: '999.99', // Use string for decimal
         category: 'electronics',
         inventory_count: 50,
         tags: new Set(['laptop', 'computer', 'electronics']),
@@ -121,10 +121,10 @@ describe('Session 6: Examples Validation', () => {
       });
 
       const product2 = await Product.create({
-        id: 'prod-2',
+        id: client.uuid(),
         name: 'Mouse',
         description: 'Wireless mouse',
-        price: 29.99,
+        price: '29.99', // Use string for decimal
         category: 'electronics',
         inventory_count: 100,
         tags: new Set(['mouse', 'wireless', 'electronics']),
@@ -135,30 +135,31 @@ describe('Session 6: Examples Validation', () => {
       expect(product2.category).toBe('electronics');
 
       // Create order
+      const userId = client.uuid();
       const order = await Order.create({
-        id: 'order-1',
-        user_id: 'user-1',
+        id: client.uuid(),
+        user_id: userId,
         status: 'pending',
-        total_amount: 1029.98,
-        items: ['prod-1:1', 'prod-2:1'], // Simplified format
+        total_amount: '1029.98', // Use string for decimal
+        items: [`${product1.id}:1`, `${product2.id}:1`], // Use actual product IDs
         created_at: new Date()
       });
 
       expect(order.status).toBe('pending');
-      expect(order.total_amount).toBe(1029.98);
+      expect(order.total_amount).toBe('1029.98');
 
       // Query products by category
       const electronics = await Product.find({ category: 'electronics' });
       expect(electronics.length).toBeGreaterThanOrEqual(2);
 
       // Query orders by user
-      const userOrders = await Order.find({ user_id: 'user-1' });
+      const userOrders = await Order.find({ user_id: userId });
       expect(userOrders).toHaveLength(1);
-      expect(userOrders[0].id).toBe('order-1');
+      expect(userOrders[0].id).toBe(order.id);
 
       // Update order status
       const updatedOrder = await Order.update(
-        { id: 'order-1' },
+        { id: order.id },
         { status: 'processing' }
       );
       expect(updatedOrder.status).toBe('processing');

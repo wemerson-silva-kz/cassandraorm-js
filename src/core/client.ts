@@ -339,6 +339,19 @@ export class CassandraClient {
     return typeMap[type] || 'text';
   }
 
+  // Instance UUID methods for convenience
+  uuid(): string {
+    return CassandraClient.uuid().toString();
+  }
+
+  generateUuid(): string {
+    return this.uuid();
+  }
+
+  timeuuid(): string {
+    return CassandraClient.timeuuid().toString();
+  }
+
   // Static utility methods
   static uuid = types.Uuid.random;
   static uuidFromString = types.Uuid.fromString;
