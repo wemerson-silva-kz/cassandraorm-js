@@ -1,7 +1,10 @@
-// Enhanced client with AI/ML and Performance
+// Enhanced client with AI/ML, Performance, and Distributed Systems
 export { EnhancedCassandraClient, createEnhancedClient } from './core/enhanced-client.js';
 export { RealAIMLManager, ProductionSemanticCache } from './ai-ml/real-integration.js';
 export { AdvancedPerformanceOptimizer, ConnectionPoolOptimizer } from './performance/advanced-optimization.js';
+export { DistributedSystemsManager } from './distributed/distributed-manager.js';
+export { RedisDistributedCache, DistributedLockManager } from './distributed/redis-integration.js';
+export { ConsulServiceDiscovery, DistributedConfigManager } from './distributed/consul-integration.js';
 
 // Core exports
 import { CassandraClient } from "./core/client.js";

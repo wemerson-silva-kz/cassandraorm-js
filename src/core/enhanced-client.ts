@@ -1,12 +1,14 @@
 import { CassandraClient } from './client.js';
 import { RealAIMLManager, ProductionSemanticCache, AIMLConfig } from '../ai-ml/real-integration.js';
 import { AdvancedPerformanceOptimizer, ConnectionPoolOptimizer, PerformanceConfig } from '../performance/advanced-optimization.js';
+import { DistributedSystemsManager, DistributedConfig } from '../distributed/distributed-manager.js';
 
 export interface EnhancedClientConfig {
   clientOptions: any;
   ormOptions?: any;
   aiml?: AIMLConfig;
   performance?: PerformanceConfig;
+  distributed?: DistributedConfig;
 }
 
 export class EnhancedCassandraClient extends CassandraClient {
@@ -14,6 +16,7 @@ export class EnhancedCassandraClient extends CassandraClient {
   private semanticCache?: ProductionSemanticCache;
   private performanceOptimizer?: AdvancedPerformanceOptimizer;
   private connectionPool?: ConnectionPoolOptimizer;
+  private distributedManager?: DistributedSystemsManager;
 
   constructor(config: EnhancedClientConfig) {
     super(config.clientOptions, config.ormOptions);
@@ -31,11 +34,24 @@ export class EnhancedCassandraClient extends CassandraClient {
       this.performanceOptimizer = new AdvancedPerformanceOptimizer(config.performance);
       this.connectionPool = new ConnectionPoolOptimizer(config.performance.connectionPool);
     }
+
+    // Initialize Distributed Systems if configured
+    if (config.distributed) {
+      this.distributedManager = new DistributedSystemsManager(config.distributed);
+    }
   }
 
-  // Enhanced execute with AI/ML and performance optimization
+  // Enhanced execute with distributed caching
   async execute(query: string, params: any[] = [], options: any = {}): Promise<any> {
-    // Try semantic cache first
+    // Try distributed cache first
+    if (this.distributedManager) {
+      const cachedResult = await this.distributedManager.getCachedQuery(query, params);
+      if (cachedResult) {
+        return cachedResult;
+      }
+    }
+
+    // Try semantic cache
     if (this.semanticCache) {
       const cachedResult = await this.semanticCache.get(query, params);
       if (cachedResult) {
@@ -69,12 +85,80 @@ export class EnhancedCassandraClient extends CassandraClient {
       result = await executeFunction(optimizedQuery, optimizedParams);
     }
 
+    // Cache result in distributed cache
+    if (this.distributedManager) {
+      await this.distributedManager.setCachedQuery(query, params, result);
+    }
+
     // Cache result semantically
     if (this.semanticCache) {
       await this.semanticCache.set(query, params, result);
     }
 
     return result;
+  }
+
+  // Distributed Systems Methods
+  async initializeDistributedSystems(): Promise<void> {
+    if (!this.distributedManager) {
+      throw new Error('Distributed systems not configured');
+    }
+    await this.distributedManager.initialize();
+  }
+
+  async shutdownDistributedSystems(): Promise<void> {
+    if (this.distributedManager) {
+      await this.distributedManager.shutdown();
+    }
+  }
+
+  async acquireDistributedLock(resource: string, ttl?: number): Promise<string | null> {
+    if (!this.distributedManager) {
+      throw new Error('Distributed systems not configured');
+    }
+    return await this.distributedManager.acquireLock(resource, ttl);
+  }
+
+  async releaseDistributedLock(resource: string, lockValue: string): Promise<boolean> {
+    if (!this.distributedManager) {
+      throw new Error('Distributed systems not configured');
+    }
+    return await this.distributedManager.releaseLock(resource, lockValue);
+  }
+
+  async withDistributedLock<T>(resource: string, fn: () => Promise<T>, ttl?: number): Promise<T> {
+    if (!this.distributedManager) {
+      throw new Error('Distributed systems not configured');
+    }
+    return await this.distributedManager.withLock(resource, fn, ttl);
+  }
+
+  async discoverServices(serviceName: string): Promise<Array<{ address: string, port: number }>> {
+    if (!this.distributedManager) {
+      throw new Error('Distributed systems not configured');
+    }
+    return await this.distributedManager.discoverServices(serviceName);
+  }
+
+  async setDistributedConfig(key: string, value: any): Promise<void> {
+    if (!this.distributedManager) {
+      throw new Error('Distributed systems not configured');
+    }
+    await this.distributedManager.setConfig(key, value);
+  }
+
+  async getDistributedConfig(key: string): Promise<any | null> {
+    if (!this.distributedManager) {
+      throw new Error('Distributed systems not configured');
+    }
+    return await this.distributedManager.getConfig(key);
+  }
+
+  async getSystemHealth(): Promise<any> {
+    if (!this.distributedManager) {
+      return { error: 'Distributed systems not configured' };
+    }
+    return await this.distributedManager.getSystemHealth();
   }
 
   // AI/ML Methods
