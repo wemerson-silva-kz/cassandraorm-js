@@ -21,10 +21,18 @@ export class AdvancedPerformanceOptimizer {
   private queryCache = new Map<string, { result: any, timestamp: number, hitCount: number }>();
   private queryStats = new Map<string, { count: number, totalTime: number, avgTime: number }>();
   private slowQueries: Array<{ query: string, time: number, timestamp: number }> = [];
+  private cleanupInterval?: NodeJS.Timeout;
 
   constructor(config: PerformanceConfig) {
     this.config = config;
     this.startCleanupInterval();
+  }
+
+  destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = undefined;
+    }
   }
 
   async optimizeQuery(query: string, params: any[]): Promise<{ query: string, params: any[], optimizations: string[] }> {
@@ -133,7 +141,7 @@ export class AdvancedPerformanceOptimizer {
   }
 
   private startCleanupInterval(): void {
-    setInterval(() => {
+    this.cleanupInterval = setInterval(() => {
       const now = Date.now();
       
       // Clean expired cache entries
@@ -143,6 +151,9 @@ export class AdvancedPerformanceOptimizer {
         }
       }
     }, 60000); // Cleanup every minute
+    
+    // Prevent Jest from hanging
+    this.cleanupInterval.unref();
   }
 
   getPerformanceReport(): any {

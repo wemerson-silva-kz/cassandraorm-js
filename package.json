@@ -20,7 +20,7 @@
     "test:transactions": "bun run ./playground/13-distributed-transactions.test.ts",
     "test:subscriptions": "bun run ./playground/14-real-time-subscriptions.test.ts",
     "test:graphql": "bun run ./playground/15-graphql-integration.test.ts",
-    "test:performance": "bun run ./playground/16-performance-monitoring.test.ts",
+    "test:performance": "jest test/performance --verbose",
     "test:integration": "bun run ./playground/17-complete-integration.test.ts",
     "test:docs": "ts-node test/documentation/run-all-tests.ts",
     "test:docs:session1": "jest test/documentation/session1-foundation --verbose",
@@ -30,6 +30,9 @@
     "test:docs:session5": "jest test/documentation/session5-distributed --verbose",
     "test:docs:session6": "jest test/documentation/session6-integrations --verbose",
     "test:docs:examples": "jest test/documentation/session6-integrations/examples.test.ts --verbose",
+    "test:ai-ml": "jest test/ai-ml --verbose",
+    "test:enhanced": "jest test/core/enhanced-client.test.ts --verbose",
+    "test:new-features": "jest test/ai-ml test/performance test/core/enhanced-client.test.ts --verbose",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -60,7 +63,8 @@
   },
   "homepage": "https://github.com/wemerson-silva-kz/cassandraorm-js#readme",
   "dependencies": {
-    "cassandra-driver": "^4.7.2"
+    "cassandra-driver": "^4.7.2",
+    "openai": "^5.20.2"
   },
   "devDependencies": {
     "@jest/globals": "^30.1.2",
