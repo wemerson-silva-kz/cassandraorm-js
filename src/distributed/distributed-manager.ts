@@ -1,7 +1,7 @@
 import { RedisDistributedCache, DistributedLockManager } from './redis-integration.js';
 import { ConsulServiceDiscovery, DistributedConfigManager } from './consul-integration.js';
 
-export export interface DistributedConfig {
+export interface DistributedConfig {
   redis?: {
     host?: string;
     port?: number;

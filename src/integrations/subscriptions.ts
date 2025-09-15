@@ -49,7 +49,7 @@ export class SubscriptionManager extends EventEmitter {
     config: SubscriptionConfig,
     callback: (event: SubscriptionEvent) => void
   ): Promise<string> {
-    const subscriptionId = require('uuid').v4();
+    const subscriptionId = crypto.randomUUID();
     this.subscriptions.set(subscriptionId, config);
     
     this.on(`change:${config.table}`, (event: SubscriptionEvent) => {

@@ -54,7 +54,7 @@ export class DistributedTransactionManager extends EventEmitter {
   }
 
   async beginTransaction(config: TransactionConfig = {}): Promise<string> {
-    const transactionId = require('uuid').v4();
+    const transactionId = crypto.randomUUID();
     
     const transaction = {
       id: transactionId,
@@ -84,7 +84,7 @@ export class DistributedTransactionManager extends EventEmitter {
     }
 
     const operation: TransactionOperation = {
-      id: require('uuid').v4(),
+      id: crypto.randomUUID(),
       participantId,
       operation: 'prepare',
       query,
@@ -226,7 +226,7 @@ export class SagaOrchestrator extends EventEmitter {
   }
 
   async executeSaga(steps: SagaStep[]): Promise<string> {
-    const sagaId = require('uuid').v4();
+    const sagaId = crypto.randomUUID();
     
     const saga = {
       id: sagaId,

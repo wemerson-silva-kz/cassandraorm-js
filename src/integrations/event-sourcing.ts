@@ -165,7 +165,7 @@ export abstract class BaseAggregateRoot {
 
   protected addEvent(eventType: string, eventData: any, metadata?: Record<string, any>): void {
     const event: DomainEvent = {
-      id: require('uuid').v4(),
+      id: crypto.randomUUID(),
       aggregateId: this.id,
       aggregateType: this.constructor.name,
       eventType,

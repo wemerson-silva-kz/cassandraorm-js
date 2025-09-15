@@ -1,4 +1,4 @@
-export export interface PerformanceConfig {
+export interface PerformanceConfig {
   queryCache: {
     enabled: boolean;
     maxSize: number;

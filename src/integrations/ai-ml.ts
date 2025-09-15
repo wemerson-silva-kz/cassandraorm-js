@@ -91,7 +91,7 @@ export class AIMLManager {
     content: string,
     metadata: Record<string, string> = {}
   ): Promise<string> {
-    const id = require('uuid').v4();
+    const id = crypto.randomUUID();
     const embedding = await this.generateEmbedding(content);
     
     const query = `
