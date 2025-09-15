@@ -1,6 +1,23 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { EnhancedCassandraClient, createEnhancedClient } from '../../src/core/enhanced-client.js';
 
+// Mock distributed systems
+jest.mock('../../src/distributed/distributed-manager.js', () => ({
+  DistributedSystemsManager: jest.fn().mockImplementation(() => ({
+    initialize: jest.fn().mockResolvedValue(undefined),
+    shutdown: jest.fn().mockResolvedValue(undefined),
+    getCachedQuery: jest.fn().mockResolvedValue(null),
+    setCachedQuery: jest.fn().mockResolvedValue(undefined),
+    acquireLock: jest.fn().mockResolvedValue('lock-value'),
+    releaseLock: jest.fn().mockResolvedValue(true),
+    withLock: jest.fn().mockImplementation(async (resource, fn) => await fn()),
+    discoverServices: jest.fn().mockResolvedValue([]),
+    setConfig: jest.fn().mockResolvedValue(undefined),
+    getConfig: jest.fn().mockResolvedValue(null),
+    getSystemHealth: jest.fn().mockResolvedValue({ status: 'healthy' })
+  }))
+}));
+
 describe('Enhanced Cassandra Client', () => {
   const mockConfig = {
     clientOptions: {
@@ -29,6 +46,20 @@ describe('Enhanced Cassandra Client', () => {
         enabled: true,
         analyzeSlowQueries: true,
         slowQueryThreshold: 100
+      }
+    },
+    distributed: {
+      redis: {
+        host: 'localhost',
+        port: 6379
+      },
+      consul: {
+        host: 'localhost',
+        port: 8500
+      },
+      service: {
+        name: 'test-service',
+        port: 3000
       }
     }
   };
@@ -65,6 +96,18 @@ describe('Enhanced Cassandra Client', () => {
       expect(typeof client.getSemanticCacheStats).toBe('function');
     });
 
+    it('should have distributed systems methods when configured', () => {
+      expect(typeof client.initializeDistributedSystems).toBe('function');
+      expect(typeof client.shutdownDistributedSystems).toBe('function');
+      expect(typeof client.acquireDistributedLock).toBe('function');
+      expect(typeof client.releaseDistributedLock).toBe('function');
+      expect(typeof client.withDistributedLock).toBe('function');
+      expect(typeof client.discoverServices).toBe('function');
+      expect(typeof client.setDistributedConfig).toBe('function');
+      expect(typeof client.getDistributedConfig).toBe('function');
+      expect(typeof client.getSystemHealth).toBe('function');
+    });
+
     it('should throw error for AI methods when not configured', async () => {
       const clientWithoutAI = new EnhancedCassandraClient({
         clientOptions: mockConfig.clientOptions
@@ -86,6 +129,63 @@ describe('Enhanced Cassandra Client', () => {
       expect(perfReport).toHaveProperty('error');
       expect(poolStats).toHaveProperty('error');
       expect(cacheStats).toHaveProperty('error');
+    });
+
+    it('should throw error for distributed methods when not configured', async () => {
+      const clientWithoutDistributed = new EnhancedCassandraClient({
+        clientOptions: mockConfig.clientOptions
+      });
+
+      await expect(clientWithoutDistributed.initializeDistributedSystems()).rejects.toThrow('Distributed systems not configured');
+      await expect(clientWithoutDistributed.acquireDistributedLock('resource')).rejects.toThrow('Distributed systems not configured');
+      await expect(clientWithoutDistributed.discoverServices('service')).rejects.toThrow('Distributed systems not configured');
+      await expect(clientWithoutDistributed.setDistributedConfig('key', 'value')).rejects.toThrow('Distributed systems not configured');
+    });
+
+    it('should return error for system health when distributed not configured', async () => {
+      const clientWithoutDistributed = new EnhancedCassandraClient({
+        clientOptions: mockConfig.clientOptions
+      });
+
+      const health = await clientWithoutDistributed.getSystemHealth();
+      expect(health).toHaveProperty('error');
+    });
+
+    it('should initialize and shutdown distributed systems', async () => {
+      await client.initializeDistributedSystems();
+      await client.shutdownDistributedSystems();
+      // Should not throw errors
+      expect(true).toBe(true);
+    });
+
+    it('should handle distributed locking', async () => {
+      const lockValue = await client.acquireDistributedLock('test-resource', 5000);
+      expect(lockValue).toBe('lock-value');
+
+      const released = await client.releaseDistributedLock('test-resource', lockValue!);
+      expect(released).toBe(true);
+
+      const mockFn = jest.fn().mockResolvedValue('result');
+      const result = await client.withDistributedLock('test-resource', mockFn);
+      expect(result).toBe('result');
+      expect(mockFn).toHaveBeenCalled();
+    });
+
+    it('should handle service discovery', async () => {
+      const services = await client.discoverServices('test-service');
+      expect(Array.isArray(services)).toBe(true);
+    });
+
+    it('should handle distributed configuration', async () => {
+      await client.setDistributedConfig('test-key', 'test-value');
+      const value = await client.getDistributedConfig('test-key');
+      // Should not throw errors
+      expect(true).toBe(true);
+    });
+
+    it('should get system health', async () => {
+      const health = await client.getSystemHealth();
+      expect(health).toHaveProperty('status');
     });
 
     it('should return vector similarity search results', async () => {
@@ -119,6 +219,11 @@ describe('Enhanced Cassandra Client', () => {
 
       const client = createEnhancedClient(minimalConfig);
       expect(client).toBeDefined();
+    });
+
+    it('should create client with distributed systems', () => {
+      const client = createEnhancedClient(mockConfig);
+      expect(typeof client.initializeDistributedSystems).toBe('function');
     });
   });
 });

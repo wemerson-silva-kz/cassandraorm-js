@@ -115,18 +115,14 @@ export class ConsulServiceDiscovery {
   }
 
   async getKeyValue(key: string): Promise<any | null> {
+    const result = await this.request(`/v1/kv/${key}`);
+    if (!result || result.length === 0) return null;
+    
+    const decoded = atob(result[0].Value);
     try {
-      const result = await this.request(`/v1/kv/${key}`);
-      if (!result || result.length === 0) return null;
-      
-      const decoded = atob(result[0].Value);
-      try {
-        return JSON.parse(decoded);
-      } catch {
-        return decoded;
-      }
+      return JSON.parse(decoded);
     } catch {
-      return null;
+      return decoded;
     }
   }
 
