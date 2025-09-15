@@ -1,0 +1,28 @@
+[extension]
+id = "cassandraorm"
+name = "CassandraORM JS"
+description = "Language support for CassandraORM JS with syntax highlighting"
+version = "1.0.0"
+schema_version = 1
+authors = ["CassandraORM Team <team@cassandraorm.com>"]
+repository = "https://github.com/wemerson-silva-kz/cassandraorm-js"
+
+[[grammar]]
+name = "cassandraorm"
+path = "grammars/cassandraorm.scm"
+
+[[language]]
+name = "CassandraORM Schema"
+grammar = "cassandraorm"
+matcher = {
+  path_suffixes = [".cassandra.ts", ".cassandra.js"],
+  first_line_pattern = "// @cassandraorm"
+}
+auto_indent_using_last_non_empty_line = true
+brackets = [
+  { start = "{", end = "}", close = true, newline = true },
+  { start = "[", end = "]", close = true, newline = true },
+  { start = "(", end = ")", close = true, newline = true }
+]
+line_comments = ["// ", "# "]
+block_comment = ["/*", "*/"]

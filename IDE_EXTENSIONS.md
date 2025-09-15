@@ -56,10 +56,18 @@ code --install-extension cassandraorm-vscode-1.0.0.vsix
 
 ### Installation
 ```bash
-# Install from Zed Extensions (coming soon)
-# Or install locally:
+# Option 1: Simple installation (syntax highlighting only)
 cd zed-extension
-zed --install-extension .
+./install-simple.sh
+
+# Option 2: Full installation (requires Rust)
+cd zed-extension  
+./install.sh
+
+# Option 3: Manual installation
+mkdir -p ~/.config/zed/extensions/cassandraorm
+cp zed-extension/extension-simple.toml ~/.config/zed/extensions/cassandraorm/extension.toml
+cp -r zed-extension/grammars ~/.config/zed/extensions/cassandraorm/
 ```
 
 ### Language Support
