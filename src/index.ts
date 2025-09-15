@@ -1,3 +1,8 @@
+// Enhanced client with AI/ML and Performance
+export { EnhancedCassandraClient, createEnhancedClient } from './core/enhanced-client.js';
+export { RealAIMLManager, ProductionSemanticCache } from './ai-ml/real-integration.js';
+export { AdvancedPerformanceOptimizer, ConnectionPoolOptimizer } from './performance/advanced-optimization.js';
+
 // Core exports
 import { CassandraClient } from "./core/client.js";
 import type { CassandraClientOptions } from "./core/types.js";
