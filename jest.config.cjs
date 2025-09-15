@@ -9,8 +9,7 @@ module.exports = {
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
-    'test/client.test.ts',
-    'test/documentation/session4-ai-realtime/real-time-subscriptions.test.ts'
+    'test/client.test.ts'
   ],
   transform: {
     '^.+\\.ts$': ['ts-jest', {

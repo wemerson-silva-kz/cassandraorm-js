@@ -28,7 +28,7 @@ export interface Person {
   points: number;
   active: boolean;
   timestamp?: Date;
-  token?: string;
+  auth_token?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -142,7 +142,7 @@ export const personSchema: ModelSchema = {
     },
     active: 'boolean',
     timestamp: 'timestamp',
-    token: 'varchar',
+    auth_token: 'varchar',
     createdAt: { type: 'timestamp', default: { $db_function: 'toTimestamp(now())' } },
   },
   key: [['userID'], 'age'],
@@ -174,7 +174,7 @@ export const personSchema: ModelSchema = {
         userID: { $gte: 10, $isnt: null },
         age: { $isnt: null },
         timeId: { $isnt: null },
-        token: { $isnt: null },
+        auth_token: { $isnt: null },
       },
     },
   },

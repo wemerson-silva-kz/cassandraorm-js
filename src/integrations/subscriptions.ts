@@ -187,6 +187,7 @@ export class SubscriptionManager extends EventEmitter {
   getSubscriptionStats() {
     return Array.from(this.subscriptionStats.entries()).map(([id, stats]) => ({
       id,
+      eventCount: stats.eventCount,
       subscription: stats.subscription
     }));
   }

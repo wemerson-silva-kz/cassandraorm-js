@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { TestHelpers } from '../utils/test-helpers';
+import { SubscriptionManager } from '../../../src/integrations/subscriptions.js';
 
 describe('Session 4: Real-time Subscriptions', () => {
   let client: any;
@@ -161,7 +162,7 @@ describe('Session 4: Real-time Subscriptions', () => {
         }
       }
 
-      const subscriptionManager = new EventSubscriptionManager();
+      const subscriptionManager = new SubscriptionManager(null as any, 'test');
       
       // Create subscriptions
       subscriptionManager.subscribe('sub1', {

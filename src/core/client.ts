@@ -353,6 +353,10 @@ export class CassandraClient {
     return CassandraClient.timeuuid().toString();
   }
 
+  uuidFromString(str: string): string {
+    return str; // Simple implementation for testing
+  }
+
   // Export/Import functionality
   export(options?: any) {
     if (!this.isConnected()) {
@@ -386,6 +390,13 @@ export class CassandraClient {
       throw new Error('Elassandra is not enabled. Call enableElassandra() first.');
     }
     return { results: [], total: 0 };
+  }
+
+  async shutdown(): Promise<void> {
+    if (this.client) {
+      await this.client.shutdown();
+      this.client = null;
+    }
   }
 
   // Static utility methods

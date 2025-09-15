@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "@jest/globals";
+import { beforeAll, afterAll, describe, expect, it } from "@jest/globals";
 import { type Person, personSchema } from "../src/examples/person.js";
 import { CassandraClient, createClient, timeuuid, uuid } from "../src/index.js";
 
@@ -19,6 +19,7 @@ describe("CassandraClient", () => {
           replication_factor: 1,
         },
         migration: "safe",
+        createKeyspace: true,
       },
     });
 
@@ -27,6 +28,12 @@ describe("CassandraClient", () => {
 
     // Await the Promise returned by loadSchema
     PersonModel = await client.loadSchema<Person>("person", personSchema);
+  });
+
+  afterAll(async () => {
+    if (client) {
+      await client.shutdown();
+    }
   });
 
   describe("Client Creation", () => {
