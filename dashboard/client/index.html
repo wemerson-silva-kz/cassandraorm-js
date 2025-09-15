@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CassandraORM Dashboard</title>
+    <script src="https://cdn.socket.io/4.7.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #334155;
+        }
+        .header h1 {
+            color: #60a5fa;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        .header p { color: #94a3b8; margin-top: 0.5rem; }
+        .container { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .card h3 {
+            color: #f1f5f9;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #334155;
+        }
+        .metric:last-child { border-bottom: none; }
+        .metric-label { color: #94a3b8; }
+        .metric-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        .status-connected { color: #10b981; }
+        .status-error { color: #ef4444; }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+        .query-editor {
+            grid-column: 1 / -1;
+        }
+        .query-input {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            color: #e2e8f0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 120px;
+        }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #2563eb; }
+        .results {
+            margin-top: 1rem;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .icon { font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 CassandraORM Dashboard</h1>
+        <p>Real-time monitoring and management for the most advanced Cassandra ORM</p>
+    </div>
+
+    <div class="container">
+        <div class="grid">
+            <!-- Connection Status -->
+            <div class="card">
+                <h3><span class="icon">🔗</span> Connection Status</h3>
+                <div class="metric">
+                    <span class="metric-label">Status</span>
+                    <span class="metric-value status-connected" id="connection-status">Connected</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Active Connections</span>
+                    <span class="metric-value" id="active-connections">5</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Total Queries</span>
+                    <span class="metric-value" id="total-queries">1,247</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Avg Response Time</span>
+                    <span class="metric-value" id="avg-response">12.5ms</span>
+                </div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="card">
+                <h3><span class="icon">📊</span> Performance</h3>
+                <div class="chart-container">
+                    <canvas id="performance-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Query Editor -->
+            <div class="card query-editor">
+                <h3><span class="icon">⚡</span> Query Editor</h3>
+                <textarea 
+                    class="query-input" 
+                    id="query-input" 
+                    placeholder="SELECT * FROM users LIMIT 10;"
+                >SELECT * FROM users LIMIT 10;</textarea>
+                <button class="btn" onclick="executeQuery()">Execute Query</button>
+                <div class="results" id="query-results">
+                    Ready to execute queries...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let performanceChart;
+
+        // Initialize performance chart
+        const ctx = document.getElementById('performance-chart').getContext('2d');
+        performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Queries/sec',
+                    data: [],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: 'Avg Response Time (ms)',
+                    data: [],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#e2e8f0' } }
+                },
+                scales: {
+                    x: { 
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: '#334155' }
+                    },
+                    y: { 
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: '#334155' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        ticks: { color: '#94a3b8' },
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
+        });
+
+        // Socket event handlers
+        socket.on('metrics', (data) => {
+            updateConnectionMetrics(data.connection);
+            updatePerformanceChart(data.queries);
+        });
+
+        function updateConnectionMetrics(connection) {
+            document.getElementById('connection-status').textContent = 
+                connection.connected ? 'Connected' : 'Disconnected';
+            document.getElementById('active-connections').textContent = connection.activeConnections;
+            document.getElementById('total-queries').textContent = connection.totalQueries.toLocaleString();
+            document.getElementById('avg-response').textContent = connection.avgResponseTime.toFixed(1) + 'ms';
+        }
+
+        function updatePerformanceChart(queries) {
+            const labels = queries.map(q => new Date(q.timestamp).toLocaleTimeString());
+            const queryData = queries.map(q => q.queries);
+            const timeData = queries.map(q => q.avgTime);
+
+            performanceChart.data.labels = labels;
+            performanceChart.data.datasets[0].data = queryData;
+            performanceChart.data.datasets[1].data = timeData;
+            performanceChart.update('none');
+        }
+
+        async function executeQuery() {
+            const query = document.getElementById('query-input').value;
+            const resultsDiv = document.getElementById('query-results');
+            
+            resultsDiv.textContent = 'Executing query...';
+            
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultsDiv.innerHTML = `
+                        <div style="color: #10b981; margin-bottom: 0.5rem;">
+                            ✅ Query executed successfully (${result.executionTime.toFixed(2)}ms)
+                        </div>
+                        <div style="color: #94a3b8; margin-bottom: 1rem;">
+                            ${result.rowCount} rows returned
+                        </div>
+                        <pre>${JSON.stringify(result.rows, null, 2)}</pre>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div style="color: #ef4444;">❌ Query failed: ${result.error}</div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div style="color: #ef4444;">❌ Network error: ${error.message}</div>
+                `;
+            }
+        }
+
+        // Initialize with sample data
+        setTimeout(() => {
+            updateConnectionMetrics({
+                connected: true,
+                activeConnections: 5,
+                totalQueries: 1247,
+                avgResponseTime: 12.5
+            });
+        }, 100);
+    </script>
+</body>
+</html>

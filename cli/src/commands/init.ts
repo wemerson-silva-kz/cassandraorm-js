@@ -1,210 +1,170 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+import inquirer from 'inquirer';
+import chalk from 'chalk';
+import ora from 'ora';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
 
-export async function initProject(projectName: string, options: any) {
-  console.log(`🚀 Initializing CassandraORM project: ${projectName}`);
-  
-  const projectPath = path.join(process.cwd(), projectName);
-  
+export async function initCommand(options: any) {
+  console.log(chalk.blue('\n🚀 Initializing new CassandraORM project...\n'));
+
+  const answers = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'projectName',
+      message: 'Project name:',
+      default: 'my-cassandra-app'
+    },
+    {
+      type: 'confirm',
+      name: 'typescript',
+      message: 'Use TypeScript?',
+      default: true
+    },
+    {
+      type: 'checkbox',
+      name: 'features',
+      message: 'Select features to include:',
+      choices: [
+        { name: 'AI/ML Integration', value: 'ai' },
+        { name: 'Real-time Subscriptions', value: 'realtime' },
+        { name: 'Event Sourcing', value: 'events' },
+        { name: 'GraphQL Integration', value: 'graphql' },
+        { name: 'Web Dashboard', value: 'dashboard' }
+      ]
+    }
+  ]);
+
+  const spinner = ora('Creating project structure...').start();
+
   try {
     // Create project directory
-    await fs.mkdir(projectPath, { recursive: true });
-    
-    // Create basic structure
-    const dirs = [
-      'src/models',
-      'src/migrations',
-      'src/config',
-      'tests',
-      'docs'
-    ];
-    
-    for (const dir of dirs) {
-      await fs.mkdir(path.join(projectPath, dir), { recursive: true });
-    }
+    await mkdir(answers.projectName, { recursive: true });
     
     // Create package.json
     const packageJson = {
-      name: projectName,
+      name: answers.projectName,
       version: '1.0.0',
-      description: `CassandraORM project: ${projectName}`,
-      main: options.typescript ? 'src/index.ts' : 'src/index.js',
+      description: 'CassandraORM application',
+      main: answers.typescript ? 'dist/index.js' : 'index.js',
       scripts: {
-        start: 'node src/index.js',
-        dev: 'cassandraorm dev',
-        test: 'npm test',
-        migrate: 'cassandraorm migrate --up',
-        dashboard: 'cassandraorm dashboard'
+        start: answers.typescript ? 'node dist/index.js' : 'node index.js',
+        dev: answers.typescript ? 'ts-node src/index.ts' : 'node index.js',
+        build: answers.typescript ? 'tsc' : 'echo "No build needed"',
+        test: 'jest'
       },
       dependencies: {
-        'cassandraorm-js': '^2.0.0',
-        'cassandra-driver': '^4.7.2'
+        'cassandraorm-js': '^1.0.0'
       },
-      devDependencies: options.typescript ? {
+      devDependencies: answers.typescript ? {
         'typescript': '^5.0.0',
+        'ts-node': '^10.9.0',
         '@types/node': '^20.0.0'
       } : {}
     };
-    
-    await fs.writeFile(
-      path.join(projectPath, 'package.json'),
+
+    await writeFile(
+      join(answers.projectName, 'package.json'),
       JSON.stringify(packageJson, null, 2)
     );
-    
+
     // Create main file
-    const mainFile = options.typescript ? 
-      generateTypeScriptMain(options) : 
-      generateJavaScriptMain(options);
-    
-    const extension = options.typescript ? '.ts' : '.js';
-    await fs.writeFile(
-      path.join(projectPath, `src/index${extension}`),
-      mainFile
-    );
-    
-    // Create config file
-    const configFile = generateConfig(options);
-    await fs.writeFile(
-      path.join(projectPath, `src/config/database${extension}`),
-      configFile
-    );
-    
-    // Create README
-    const readme = generateReadme(projectName, options);
-    await fs.writeFile(
-      path.join(projectPath, 'README.md'),
-      readme
-    );
-    
-    console.log('✅ Project created successfully!');
-    console.log('\n📋 Next steps:');
-    console.log(`   cd ${projectName}`);
-    console.log('   npm install');
-    console.log('   cassandraorm dev');
-    console.log('\n🎉 Happy coding with CassandraORM!');
-    
-  } catch (error) {
-    console.error('❌ Error creating project:', error);
-    process.exit(1);
-  }
-}
-
-function generateTypeScriptMain(options: any): string {
-  return `import { createClient } from 'cassandraorm-js';
-import config from './config/database.js';
+    const mainFile = answers.typescript ? `
+import { createClient } from 'cassandraorm-js';
 
 async function main() {
-  console.log('🚀 Starting CassandraORM application...');
-  
-  const client = createClient(config);
-  await client.connect();
-  
-  console.log('✅ Connected to Cassandra');
-  
-  ${options.ai ? `
-  // AI/ML Features
-  const { AIMLManager } = await import('cassandraorm-js');
-  const aiml = new AIMLManager(client.driver, config.clientOptions.keyspace);
-  console.log('🧠 AI/ML features enabled');
-  ` : ''}
-  
-  ${options.graphql ? `
-  // GraphQL Integration
-  const { GraphQLSchemaGenerator } = await import('cassandraorm-js');
-  const generator = new GraphQLSchemaGenerator();
-  console.log('🌐 GraphQL integration enabled');
-  ` : ''}
-  
-  // Your application logic here
-  
-  process.on('SIGINT', async () => {
-    console.log('🛑 Shutting down...');
-    await client.shutdown();
-    process.exit(0);
-  });
-}
-
-main().catch(console.error);`;
-}
-
-function generateJavaScriptMain(options: any): string {
-  return `const { createClient } = require('cassandraorm-js');
-const config = require('./config/database.js');
-
-async function main() {
-  console.log('🚀 Starting CassandraORM application...');
-  
-  const client = createClient(config);
-  await client.connect();
-  
-  console.log('✅ Connected to Cassandra');
-  
-  // Your application logic here
-  
-  process.on('SIGINT', async () => {
-    console.log('🛑 Shutting down...');
-    await client.shutdown();
-    process.exit(0);
-  });
-}
-
-main().catch(console.error);`;
-}
-
-function generateConfig(options: any): string {
-  return `export default {
-  clientOptions: {
-    contactPoints: ['127.0.0.1'],
-    localDataCenter: 'datacenter1',
-    keyspace: 'myapp'
-  },
-  ormOptions: {
-    createKeyspace: true,
-    migration: 'safe',
-    defaultReplicationStrategy: {
-      class: 'SimpleStrategy',
-      replication_factor: 1
+  const client = createClient({
+    clientOptions: {
+      contactPoints: ['127.0.0.1'],
+      localDataCenter: 'datacenter1',
+      keyspace: '${answers.projectName.replace(/-/g, '_')}'
+    },
+    ormOptions: {
+      createKeyspace: true,
+      migration: 'safe'
     }
-  }
-};`;
+  });
+
+  await client.connect();
+  console.log('🚀 Connected to Cassandra!');
+  
+  // Your code here
+  
+  await client.shutdown();
 }
 
-function generateReadme(projectName: string, options: any): string {
-  return `# ${projectName}
+main().catch(console.error);
+` : `
+const { createClient } = require('cassandraorm-js');
 
-CassandraORM JS project with advanced features.
+async function main() {
+  const client = createClient({
+    clientOptions: {
+      contactPoints: ['127.0.0.1'],
+      localDataCenter: 'datacenter1',
+      keyspace: '${answers.projectName.replace(/-/g, '_')}'
+    },
+    ormOptions: {
+      createKeyspace: true,
+      migration: 'safe'
+    }
+  });
 
-## Features
+  await client.connect();
+  console.log('🚀 Connected to Cassandra!');
+  
+  // Your code here
+  
+  await client.shutdown();
+}
 
-- ✅ **Modern ORM** - TypeScript-first with ES6+ support
-- ✅ **Advanced Features** - 16 enterprise-grade capabilities
-${options.ai ? '- ✅ **AI/ML Integration** - Vector search and query optimization' : ''}
-${options.graphql ? '- ✅ **GraphQL Integration** - Auto-generated schemas' : ''}
-- ✅ **Real-time** - WebSocket/SSE subscriptions
-- ✅ **Event Sourcing** - CQRS pattern implementation
-- ✅ **Performance** - Intelligent caching and optimization
-
-## Quick Start
-
-\`\`\`bash
-npm install
-cassandraorm dev
-\`\`\`
-
-## Commands
-
-- \`cassandraorm dev\` - Start development server
-- \`cassandraorm migrate\` - Run migrations
-- \`cassandraorm dashboard\` - Open web dashboard
-- \`cassandraorm generate model User\` - Generate model
-
-## Documentation
-
-- [CassandraORM Documentation](https://github.com/wemerson-silva-kz/cassandraorm-js)
-- [Complete Features Guide](https://github.com/wemerson-silva-kz/cassandraorm-js/blob/main/docs/COMPLETE_DOCUMENTATION.md)
-
-## License
-
-MIT
+main().catch(console.error);
 `;
+
+    const fileName = answers.typescript ? 'src/index.ts' : 'index.js';
+    if (answers.typescript) {
+      await mkdir(join(answers.projectName, 'src'), { recursive: true });
+    }
+    
+    await writeFile(join(answers.projectName, fileName), mainFile);
+
+    // Create TypeScript config if needed
+    if (answers.typescript) {
+      const tsConfig = {
+        compilerOptions: {
+          target: 'ES2020',
+          module: 'commonjs',
+          outDir: './dist',
+          rootDir: './src',
+          strict: true,
+          esModuleInterop: true,
+          skipLibCheck: true,
+          forceConsistentCasingInFileNames: true
+        },
+        include: ['src/**/*'],
+        exclude: ['node_modules', 'dist']
+      };
+
+      await writeFile(
+        join(answers.projectName, 'tsconfig.json'),
+        JSON.stringify(tsConfig, null, 2)
+      );
+    }
+
+    spinner.succeed(chalk.green('Project created successfully!'));
+
+    console.log(chalk.yellow(`
+📁 Project created: ${answers.projectName}
+
+🚀 Next steps:
+  cd ${answers.projectName}
+  npm install
+  ${answers.typescript ? 'npm run dev' : 'npm start'}
+
+🎯 Features included: ${answers.features.join(', ') || 'Basic setup'}
+    `));
+
+  } catch (error) {
+    spinner.fail(chalk.red('Failed to create project'));
+    console.error(error);
+  }
 }
