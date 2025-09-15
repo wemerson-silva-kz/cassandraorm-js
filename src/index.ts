@@ -72,7 +72,6 @@ export { MigrationManager } from "./utils/migrations.js";
 export { PluginManager, CachePlugin, ValidationPlugin } from "./utils/plugin-system.js";
 export { DataExporter } from './utils/exporter.js';
 export { DataImporter } from './utils/importer.js';
-export { ModelLoader } from './utils/model-loader.js';
 export { StreamingQuery, createModelStream } from './utils/streaming.js';
 export { OptimizedPagination, PaginatedQueryBuilder } from './utils/optimized-pagination.js';
 export { BackupManager } from './utils/backup.js';

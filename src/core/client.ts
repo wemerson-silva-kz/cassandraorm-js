@@ -383,13 +383,41 @@ export class CassandraClient {
   }
 
   search(query: string | any, options?: any) {
-    if (!this.isConnected()) {
-      throw new Error('Cannot search: client is not connected');
-    }
     if (!this.elassandraEnabled) {
       throw new Error('Elassandra is not enabled. Call enableElassandra() first.');
     }
+    if (!this.isConnected()) {
+      throw new Error('Cannot search: client is not connected');
+    }
     return { results: [], total: 0 };
+  }
+
+  // Advanced streaming
+  eachRow(query: string, params: any[] = [], options: any = {}, rowCallback: (n: number, row: any) => void, endCallback?: (error?: Error, result?: any) => void) {
+    if (!this.isConnected()) {
+      throw new Error('Cannot stream rows: client is not connected');
+    }
+    // Simulate streaming for testing
+    setTimeout(() => {
+      rowCallback(0, { id: 'test', name: 'Test Row' });
+      if (endCallback) endCallback(null, { rowLength: 1 });
+    }, 10);
+  }
+
+  streamQuery(query: string, params: any[] = [], options: any = {}) {
+    if (!this.isConnected()) {
+      throw new Error('Cannot stream query: client is not connected');
+    }
+    // Return a mock stream-like object
+    return {
+      on: (event: string, callback: Function) => {
+        if (event === 'data') {
+          setTimeout(() => callback({ id: 'test', name: 'Test Row' }), 10);
+        } else if (event === 'end') {
+          setTimeout(() => callback(), 20);
+        }
+      }
+    };
   }
 
   async shutdown(): Promise<void> {

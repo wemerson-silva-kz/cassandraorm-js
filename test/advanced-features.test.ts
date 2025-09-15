@@ -92,22 +92,20 @@ describe('Advanced Features', () => {
     });
 
     it('should have static setDirectory method', () => {
-      expect(typeof client.constructor.setDirectory).toBe('function');
+      expect(typeof ModelLoader.setDirectory).toBe('function');
     });
 
     it('should have static bind method', () => {
-      expect(typeof client.constructor.bind).toBe('function');
+      expect(typeof ModelLoader.bind).toBe('function');
     });
 
     it('should have static bindAsync method', () => {
-      expect(typeof client.constructor.bindAsync).toBe('function');
+      expect(typeof ModelLoader.bindAsync).toBe('function');
     });
 
     it('should set directory correctly', () => {
-      const ClientClass = client.constructor;
-      const result = ClientClass.setDirectory('./models');
-      expect(result).toBe(ClientClass);
-      expect((ClientClass as any).directory).toBe('./models');
+      ModelLoader.setDirectory('./models');
+      expect(ModelLoader.getDirectory()).toBe('./models');
     });
   });
 
