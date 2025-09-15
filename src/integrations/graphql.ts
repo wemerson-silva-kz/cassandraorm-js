@@ -26,6 +26,7 @@ export interface GraphQLType {
 export class GraphQLSchemaGenerator {
   private config: Required<GraphQLConfig>;
   private types = new Map<string, GraphQLType>();
+  private models = new Map<string, any>();
   private resolvers = new Map<string, any>();
 
   constructor(config: GraphQLConfig = {}) {
@@ -46,7 +47,7 @@ export class GraphQLSchemaGenerator {
 
     const graphqlType = this.convertSchemaToGraphQL(name, schema);
     this.types.set(name, graphqlType);
-    this.generateResolvers(name, schema);
+    this.models.set(name, schema);
     
     return this;
   }
@@ -143,21 +144,36 @@ export class GraphQLSchemaGenerator {
     return typeMap[cassandraType] || null;
   }
 
-  private generateResolvers(name: string, schema: any): void {
-    const typeName = this.capitalize(name);
-    const resolvers: any = {};
+  generateResolvers(): any {
+    const allResolvers: any = { Query: {}, Mutation: {}, Subscription: {} };
+    
+    this.models.forEach((schema, name) => {
+      const resolvers = this.generateModelResolvers(name, schema);
+      Object.assign(allResolvers.Query, resolvers.Query);
+      Object.assign(allResolvers.Mutation, resolvers.Mutation);
+      Object.assign(allResolvers.Subscription, resolvers.Subscription);
+    });
+    
+    return allResolvers;
+  }
 
-    // Query resolvers
-    resolvers[`${name}`] = async (parent: any, args: any, context: any) => {
+  private generateModelResolvers(name: string, schema: any): any {
+    const typeName = this.capitalize(name);
+    const resolvers: any = { Query: {}, Mutation: {}, Subscription: {} };
+
+    // Query resolvers (singular)
+    resolvers.Query[name.endsWith('s') ? name.slice(0, -1) : name] = async (parent: any, args: any, context: any) => {
       const { id } = args;
-      // Implementation would use the actual data access layer
       return context.dataSources[name].findById(id);
     };
 
-    resolvers[`${name}s`] = async (parent: any, args: any, context: any) => {
+    // Query resolvers (plural)
+    resolvers.Query[name.endsWith('s') ? name : `${name}s`] = async (parent: any, args: any, context: any) => {
       const { where, limit, offset } = args;
       return context.dataSources[name].find({ where, limit, offset });
     };
+
+    return resolvers;
 
     // Mutation resolvers
     if (this.config.mutations.includes('create')) {

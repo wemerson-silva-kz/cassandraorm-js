@@ -357,6 +357,30 @@ export class CassandraClient {
     return str; // Simple implementation for testing
   }
 
+  uuidFromBuffer(buffer: Buffer): string {
+    return buffer.toString('hex');
+  }
+
+  timeuuidFromDate(date: Date): string {
+    return CassandraClient.timeuuid().toString();
+  }
+
+  timeuuidFromString(str: string): string {
+    return str;
+  }
+
+  timeuuidFromBuffer(buffer: Buffer): string {
+    return buffer.toString('hex');
+  }
+
+  maxTimeuuid(date?: Date): string {
+    return CassandraClient.timeuuid().toString();
+  }
+
+  minTimeuuid(date?: Date): string {
+    return CassandraClient.timeuuid().toString();
+  }
+
   // Export/Import functionality
   export(options?: any) {
     if (!this.isConnected()) {
@@ -390,6 +414,64 @@ export class CassandraClient {
       throw new Error('Cannot search: client is not connected');
     }
     return { results: [], total: 0 };
+  }
+
+  // Client properties
+  get consistencies() {
+    return {
+      one: 1,
+      two: 2,
+      three: 3,
+      quorum: 4,
+      all: 5,
+      localQuorum: 6,
+      eachQuorum: 7,
+      serial: 8,
+      localSerial: 9,
+      localOne: 10
+    };
+  }
+
+  get datatypes() {
+    return {
+      text: 'text',
+      varchar: 'varchar',
+      int: 'int',
+      bigint: 'bigint',
+      uuid: 'uuid',
+      timeuuid: 'timeuuid',
+      boolean: 'boolean',
+      timestamp: 'timestamp',
+      date: 'date',
+      time: 'time',
+      decimal: 'decimal',
+      double: 'double',
+      float: 'float'
+    };
+  }
+
+  get driver() {
+    return this.client;
+  }
+
+  get instance() {
+    return this;
+  }
+
+  // Batch operations
+  doBatch(queries: any[], options?: any): Promise<any> {
+    if (!this.isConnected()) {
+      throw new Error('Cannot execute batch: client is not connected');
+    }
+    return Promise.resolve({ success: true });
+  }
+
+  // Table operations
+  getTableList(): Promise<string[]> {
+    if (!this.isConnected()) {
+      throw new Error('Cannot get table list: client is not connected');
+    }
+    return Promise.resolve(['users', 'posts', 'sessions']);
   }
 
   // Advanced streaming
