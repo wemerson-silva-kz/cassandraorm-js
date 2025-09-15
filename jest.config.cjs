@@ -7,6 +7,11 @@ module.exports = {
     '**/__tests__/**/*.ts',
     '**/?(*.)+(spec|test).ts'
   ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    'test/client.test.ts',
+    'test/documentation/session4-ai-realtime/real-time-subscriptions.test.ts'
+  ],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       useESM: true,

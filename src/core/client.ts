@@ -370,17 +370,21 @@ export class CassandraClient {
     return { success: true, message: 'Import functionality available' };
   }
 
+  private elassandraEnabled = false;
+
   // Elassandra support
   enableElassandra(options?: any) {
-    // Implementation would go here
+    this.elassandraEnabled = true;
     return { success: true, message: 'Elassandra enabled' };
   }
 
-  search(query: string, options?: any) {
+  search(query: string | any, options?: any) {
     if (!this.isConnected()) {
       throw new Error('Cannot search: client is not connected');
     }
-    // Implementation would go here
+    if (!this.elassandraEnabled) {
+      throw new Error('Elassandra is not enabled. Call enableElassandra() first.');
+    }
     return { results: [], total: 0 };
   }
 

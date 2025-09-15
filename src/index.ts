@@ -4,6 +4,7 @@ import type { CassandraClientOptions } from "./core/types.js";
 
 // Core exports
 export { BaseModel, CassandraClient, BatchBuilder } from "./core/client.js";
+export { ModelLoader } from "./core/model-loader.js";
 export { CassandraORM } from "./core/orm.js";
 
 // Cassandra Types

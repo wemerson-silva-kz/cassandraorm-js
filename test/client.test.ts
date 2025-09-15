@@ -22,6 +22,9 @@ describe("CassandraClient", () => {
       },
     });
 
+    // Connect the client
+    await client.connect();
+
     // Await the Promise returned by loadSchema
     PersonModel = await client.loadSchema<Person>("person", personSchema);
   });
