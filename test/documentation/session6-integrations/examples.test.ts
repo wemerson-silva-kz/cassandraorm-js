@@ -155,7 +155,7 @@ describe('Session 6: Examples Validation', () => {
       // Query orders by user
       const userOrders = await Order.find({ user_id: userId });
       expect(userOrders).toHaveLength(1);
-      expect(userOrders[0].id).toBe(order.id);
+      expect(userOrders[0].id.toString()).toBe(order.id.toString());
 
       // Update order status
       const updatedOrder = await Order.update(
@@ -357,11 +357,14 @@ describe('Session 6: Examples Validation', () => {
       const wsManager = new WebSocketManager();
 
       // Create chat room
+      const userId1 = client.uuid();
+      const userId2 = client.uuid();
+      
       const room = await ChatRoom.create({
-        id: 'room-1',
+        id: client.uuid(),
         name: 'General Chat',
         type: 'public',
-        members: new Set(['user1', 'user2']),
+        members: new Set([userId1, userId2]),
         created_at: new Date()
       });
 
@@ -369,9 +372,9 @@ describe('Session 6: Examples Validation', () => {
 
       // Create message
       const message = await Message.create({
-        id: 'msg-1',
+        id: client.timeuuid(),
         room_id: room.id,
-        user_id: 'user1',
+        user_id: userId1,
         content: 'Hello everyone!',
         message_type: 'text',
         created_at: new Date()
@@ -492,7 +495,7 @@ describe('Session 6: Examples Validation', () => {
 
       // Create content with embeddings
       const content1 = await Content.create({
-        id: 'content-1',
+        id: client.uuid(),
         title: 'Machine Learning Basics',
         content: 'Introduction to machine learning algorithms and concepts.',
         category: 'technology',
@@ -502,7 +505,7 @@ describe('Session 6: Examples Validation', () => {
       });
 
       const content2 = await Content.create({
-        id: 'content-2',
+        id: client.uuid(),
         title: 'Deep Learning Advanced',
         content: 'Advanced concepts in deep learning and neural networks.',
         category: 'technology',
@@ -515,8 +518,11 @@ describe('Session 6: Examples Validation', () => {
       expect(content2.category).toBe('technology');
 
       // Create user interactions
+      const user1Id = client.uuid();
+      const user2Id = client.uuid();
+      
       await UserInteraction.create({
-        user_id: 'user1',
+        user_id: user1Id,
         content_id: content1.id,
         interaction_type: 'view',
         rating: 5,
@@ -524,7 +530,7 @@ describe('Session 6: Examples Validation', () => {
       });
 
       await UserInteraction.create({
-        user_id: 'user2',
+        user_id: user2Id,
         content_id: content1.id,
         interaction_type: 'like',
         rating: 4,

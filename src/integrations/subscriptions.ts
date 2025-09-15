@@ -146,15 +146,19 @@ export class SubscriptionManager extends EventEmitter {
     const matches = [];
     
     for (const [id, subscription] of this.subscriptions) {
-      // Check table match
-      if (subscription.table !== event.table) continue;
+      // Check table match - MUST match exactly
+      if (subscription.table !== event.table) {
+        continue;
+      }
       
       // Check operation match
       const operations = subscription.operations || ['insert', 'update', 'delete'];
-      if (!operations.includes(event.operation as any)) continue;
+      if (!operations.includes(event.operation as any)) {
+        continue;
+      }
       
-      // Check filters match - only check event-level properties, not data
-      if (subscription.filters) {
+      // Check filters match - only if filters exist and have properties
+      if (subscription.filters && Object.keys(subscription.filters).length > 0) {
         let filtersMatch = true;
         for (const [key, value] of Object.entries(subscription.filters)) {
           if (event[key] !== value) {
@@ -162,7 +166,9 @@ export class SubscriptionManager extends EventEmitter {
             break;
           }
         }
-        if (!filtersMatch) continue;
+        if (!filtersMatch) {
+          continue;
+        }
       }
       
       // Update subscription stats
