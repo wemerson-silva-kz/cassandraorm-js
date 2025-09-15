@@ -123,6 +123,68 @@ export class SubscriptionManager extends EventEmitter {
     poll();
   }
 
+  private subscriptionStats = new Map<string, { 
+    subscription: any; 
+    eventCount: number; 
+  }>();
+
+  // Enhanced subscribe method with stats tracking
+  subscribe(id: string, config: any) {
+    this.subscriptions.set(id, config);
+    this.subscriptionStats.set(id, {
+      subscription: {
+        ...config,
+        createdAt: new Date(),
+        eventCount: 0
+      },
+      eventCount: 0
+    });
+  }
+
+  // Simulate event publishing for testing
+  publishEvent(event: { table: string; operation: string; data?: any; [key: string]: any }) {
+    const matches = [];
+    
+    for (const [id, subscription] of this.subscriptions) {
+      // Check table match
+      if (subscription.table !== event.table) continue;
+      
+      // Check operation match
+      const operations = subscription.operations || ['insert', 'update', 'delete'];
+      if (!operations.includes(event.operation as any)) continue;
+      
+      // Check filters match - only check event-level properties, not data
+      if (subscription.filters) {
+        let filtersMatch = true;
+        for (const [key, value] of Object.entries(subscription.filters)) {
+          if (event[key] !== value) {
+            filtersMatch = false;
+            break;
+          }
+        }
+        if (!filtersMatch) continue;
+      }
+      
+      // Update subscription stats
+      const stats = this.subscriptionStats.get(id);
+      if (stats) {
+        stats.eventCount++;
+        stats.subscription.eventCount = stats.eventCount;
+      }
+      
+      matches.push({ id, subscription: this.subscriptionStats.get(id)?.subscription });
+    }
+    
+    return matches;
+  }
+
+  getSubscriptionStats() {
+    return Array.from(this.subscriptionStats.entries()).map(([id, stats]) => ({
+      id,
+      subscription: stats.subscription
+    }));
+  }
+
   async logChange(table: string, operation: 'insert' | 'update' | 'delete', data: any): Promise<void> {
     const query = `
       INSERT INTO ${this.keyspace}.${this.changeLogTable} (id, table_name, operation, data, timestamp)
