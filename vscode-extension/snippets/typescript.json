@@ -2,17 +2,17 @@
   "CassandraORM Client": {
     "prefix": "cassandra-client",
     "body": [
-      "import { createClient } from 'cassandraorm-js';",
+      "import { createEnhancedClient } from 'cassandraorm-js';",
       "",
-      "const client = createClient({",
+      "const client = createEnhancedClient({",
       "  clientOptions: {",
       "    contactPoints: ['${1:127.0.0.1}'],",
       "    localDataCenter: '${2:datacenter1}',",
       "    keyspace: '${3:myapp}'",
       "  },",
       "  ormOptions: {",
-      "    createKeyspace: true,",
-      "    migration: 'safe'",
+      "    createKeyspace: ${4:true},",
+      "    migration: '${5:safe}'",
       "  }",
       "});",
       "",
@@ -20,100 +20,159 @@
     ],
     "description": "Create CassandraORM client"
   },
-  
-  "Model Schema": {
-    "prefix": "cassandra-model",
+
+  "Enhanced Client with AI": {
+    "prefix": "cassandra-ai-client",
     "body": [
-      "const ${1:User} = await client.loadSchema('${2:users}', {",
-      "  fields: {",
-      "    id: 'uuid',",
-      "    ${3:name}: {",
-      "      type: '${4:text}',",
-      "      validate: {",
-      "        required: true",
-      "      }",
+      "import { createEnhancedClient } from 'cassandraorm-js';",
+      "",
+      "const client = createEnhancedClient({",
+      "  clientOptions: {",
+      "    contactPoints: ['${1:127.0.0.1}'],",
+      "    localDataCenter: '${2:datacenter1}',",
+      "    keyspace: '${3:myapp}'",
+      "  },",
+      "  aiml: {",
+      "    openai: {",
+      "      apiKey: process.env.OPENAI_API_KEY!,",
+      "      model: '${4:text-embedding-3-small}'",
+      "    },",
+      "    semanticCache: {",
+      "      enabled: ${5:true},",
+      "      threshold: ${6:0.85}",
       "    }",
       "  },",
-      "  key: ['id']",
-      "});"
-    ],
-    "description": "Create model schema"
-  },
-  
-  "AI/ML Integration": {
-    "prefix": "cassandra-aiml",
-    "body": [
-      "import { AIMLManager } from 'cassandraorm-js';",
-      "",
-      "const aiml = new AIMLManager(client.driver, '${1:keyspace}');",
-      "await aiml.createVectorTable('${2:documents}');",
-      "",
-      "const embedding = await aiml.generateEmbedding('${3:search query}');",
-      "const results = await aiml.similaritySearch('${2:documents}', embedding);"
-    ],
-    "description": "AI/ML vector search setup"
-  },
-  
-  "Event Sourcing": {
-    "prefix": "cassandra-events",
-    "body": [
-      "import { EventStore, BaseAggregateRoot } from 'cassandraorm-js';",
-      "",
-      "class ${1:User}Aggregate extends BaseAggregateRoot {",
-      "  static create(id: string, ${2:name}: string): ${1:User}Aggregate {",
-      "    const ${3:user} = new ${1:User}Aggregate(id);",
-      "    ${3:user}.addEvent('${1:User}Created', { ${2:name} });",
-      "    return ${3:user};",
+      "  performance: {",
+      "    queryCache: {",
+      "      enabled: ${7:true},",
+      "      maxSize: ${8:1000},",
+      "      ttl: ${9:300000}",
+      "    }",
       "  }",
-      "}"
-    ],
-    "description": "Event sourcing aggregate"
-  },
-  
-  "GraphQL Integration": {
-    "prefix": "cassandra-graphql",
-    "body": [
-      "import { GraphQLSchemaGenerator } from 'cassandraorm-js';",
-      "",
-      "const generator = new GraphQLSchemaGenerator();",
-      "generator.addModel('${1:users}', ${2:userSchema});",
-      "",
-      "const typeDefs = generator.generateSchema();",
-      "const resolvers = generator.getResolvers();"
-    ],
-    "description": "GraphQL schema generation"
-  },
-  
-  "Real-time Subscriptions": {
-    "prefix": "cassandra-subscriptions",
-    "body": [
-      "import { SubscriptionManager } from 'cassandraorm-js';",
-      "",
-      "const subscriptions = new SubscriptionManager(client.driver, '${1:keyspace}');",
-      "",
-      "await subscriptions.subscribe(",
-      "  { table: '${2:users}', operation: '${3:insert}' },",
-      "  (event) => {",
-      "    console.log('${4:New user}:', event.data);",
-      "  }",
-      ");"
-    ],
-    "description": "Real-time subscriptions"
-  },
-  
-  "Semantic Caching": {
-    "prefix": "cassandra-cache",
-    "body": [
-      "import { SemanticCache } from 'cassandraorm-js';",
-      "",
-      "const cache = new SemanticCache({",
-      "  similarityThreshold: ${1:0.85},",
-      "  maxCacheSize: ${2:1000}",
       "});",
       "",
-      "await cache.set(query, params, result);",
-      "const cached = await cache.get(similarQuery, similarParams);"
+      "await client.connect();"
     ],
-    "description": "Semantic caching setup"
+    "description": "Create Enhanced CassandraORM client with AI/ML"
+  },
+
+  "Schema Definition": {
+    "prefix": "cassandra-schema",
+    "body": [
+      "const ${1:User}Schema = {",
+      "  fields: {",
+      "    ${2:id}: {",
+      "      type: '${3:uuid}',",
+      "      validate: { required: true }",
+      "    },",
+      "    ${4:name}: {",
+      "      type: '${5:text}',",
+      "      validate: { required: true, minLength: 2 }",
+      "    },",
+      "    ${6:email}: {",
+      "      type: '${7:text}',",
+      "      validate: { required: true, isEmail: true }",
+      "    },",
+      "    ${8:created_at}: {",
+      "      type: '${9:timestamp}',",
+      "      default: () => new Date()",
+      "    }",
+      "  },",
+      "  key: ['${2:id}'],",
+      "  clustering_order: { ${8:created_at}: 'desc' }",
+      "};"
+    ],
+    "description": "Define CassandraORM schema"
+  },
+
+  "Load Schema": {
+    "prefix": "cassandra-load-schema",
+    "body": [
+      "const ${1:User} = await client.loadSchema('${2:users}', ${1:User}Schema);"
+    ],
+    "description": "Load schema into CassandraORM"
+  },
+
+  "CRUD Operations": {
+    "prefix": "cassandra-crud",
+    "body": [
+      "// Create",
+      "const new${1:User} = await ${1:User}.save({",
+      "  ${2:name}: '${3:John Doe}',",
+      "  ${4:email}: '${5:john@example.com}'",
+      "});",
+      "",
+      "// Read",
+      "const ${6:users} = await ${1:User}.find({ ${7:active}: true });",
+      "const ${8:user} = await ${1:User}.findOne({ ${9:id}: ${10:userId} });",
+      "",
+      "// Update",
+      "await ${1:User}.update({ ${9:id}: ${10:userId} }, { ${2:name}: '${11:Jane Doe}' });",
+      "",
+      "// Delete",
+      "await ${1:User}.delete({ ${9:id}: ${10:userId} });"
+    ],
+    "description": "Basic CRUD operations"
+  },
+
+  "AI Embedding": {
+    "prefix": "cassandra-ai-embedding",
+    "body": [
+      "// Generate embedding",
+      "const embedding = await client.generateEmbedding('${1:search text}');",
+      "",
+      "// Vector similarity search",
+      "const similar = await client.vectorSimilaritySearch(embedding, ${2:0.8});",
+      "",
+      "// AI query optimization",
+      "const optimized = await client.optimizeQueryWithAI('${3:SELECT * FROM users}');"
+    ],
+    "description": "AI/ML operations"
+  },
+
+  "Distributed Lock": {
+    "prefix": "cassandra-distributed-lock",
+    "body": [
+      "await client.withDistributedLock('${1:resource-name}', async () => {",
+      "  // Critical section - only one process can execute this",
+      "  ${2:// Your critical code here}",
+      "}, ${3:10000}); // 10 second timeout"
+    ],
+    "description": "Distributed locking pattern"
+  },
+
+  "Migration": {
+    "prefix": "cassandra-migration",
+    "body": [
+      "import { Migration } from 'cassandraorm-js';",
+      "",
+      "export const ${1:migrationName}Migration: Migration = {",
+      "  up: async (client) => {",
+      "    await client.execute(`",
+      "      CREATE TABLE IF NOT EXISTS ${2:table_name} (",
+      "        ${3:id} UUID PRIMARY KEY,",
+      "        ${4:name} TEXT,",
+      "        ${5:created_at} TIMESTAMP",
+      "      )",
+      "    `);",
+      "  },",
+      "  ",
+      "  down: async (client) => {",
+      "    await client.execute('DROP TABLE IF EXISTS ${2:table_name}');",
+      "  }",
+      "};"
+    ],
+    "description": "Database migration"
+  },
+
+  "Query Builder": {
+    "prefix": "cassandra-query",
+    "body": [
+      "const result = await client.execute(",
+      "  'SELECT ${1:*} FROM ${2:table_name} WHERE ${3:field} = ? ${4:AND other_field = ?}',",
+      "  [${5:value1}${6:, value2}]",
+      ");"
+    ],
+    "description": "Execute CQL query"
   }
 }
