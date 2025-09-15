@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "bun:test";
+import { beforeAll, describe, expect, it } from "@jest/globals";
 import { type Person, personSchema } from "../src/examples/person.js";
 import { CassandraClient, createClient, timeuuid, uuid } from "../src/index.js";
 

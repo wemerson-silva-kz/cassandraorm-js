@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { createClient, BulkWriter, UniqueConstraintManager } from '../src/index.js';
 
 describe('Bulk Writer & Unique Constraints', () => {

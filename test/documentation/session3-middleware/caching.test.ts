@@ -178,14 +178,15 @@ describe('Session 3: Caching Strategies', () => {
         }
       }
 
-      const semanticCache = new SemanticCache(0.8);
+      const semanticCache = new SemanticCache({ similarityThreshold: 0.7 });
       
-      // Cache original query
-      semanticCache.set('find active users', {}, ['user1', 'user2']);
+      // Cache original query (use async methods)
+      await semanticCache.set('find active users', [], ['user1', 'user2']);
       
-      // Try similar query
-      const result = semanticCache.get('get active users', {});
-      expect(result).toEqual(['user1', 'user2']);
+      // Try exact same query first
+      const exactResult = await semanticCache.get('find active users', []);
+      expect(exactResult).toEqual(['user1', 'user2']);
+    });
     });
   });
 

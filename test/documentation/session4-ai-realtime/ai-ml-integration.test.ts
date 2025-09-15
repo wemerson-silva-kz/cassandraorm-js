@@ -25,7 +25,7 @@ describe('Session 4: AI/ML Integration', () => {
       });
 
       const vectorData = await VectorModel.create({
-        id: 'vec1',
+        id: client.constructor.uuid().toString(),
         content: 'Machine learning algorithms',
         embedding: '[0.1, 0.2, 0.3, 0.4, 0.5]', // Simulated embedding
         metadata: new Map([['category', 'ai'], ['difficulty', 'medium']])

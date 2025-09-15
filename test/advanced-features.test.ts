@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'bun:test';
+import { describe, it, expect, beforeAll } from '@jest/globals';
 import { createClient, DataExporter, DataImporter, ElassandraClient, ModelLoader } from '../src/index.js';
 import { personSchema, type Person } from '../src/examples/person.js';
 import { writeFile, mkdir, rm } from 'fs/promises';

@@ -43,7 +43,7 @@ describe('Session 6: Examples Validation', () => {
 
       // Create user
       const user = await User.create({
-        id: 'blog-user-1',
+        id: client.constructor.uuid().toString(),
         email: 'blogger@example.com',
         name: 'Test Blogger',
         password_hash: 'hashed_password',
@@ -54,7 +54,7 @@ describe('Session 6: Examples Validation', () => {
 
       // Create post
       const post = await Post.create({
-        id: 'blog-post-1',
+        id: client.constructor.uuid().toString(),
         title: 'My First Blog Post',
         content: 'This is the content of my first blog post.',
         author_id: user.id,
