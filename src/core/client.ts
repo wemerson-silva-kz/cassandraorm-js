@@ -1,6 +1,7 @@
 import { Client, types } from "cassandra-driver";
 import type { CassandraClientOptions, QueryOptions, ModelSchema } from "./types.js";
 import { ConnectionPool } from "../connection/pool.js";
+import { ResilientConnection } from "../connection/resilient-connection.js";
 import { QueryBuilder } from "../query/query-builder.js";
 import { SchemaValidator } from "../validation/schema-validator.js";
 import { AIMLManager, SemanticCache } from "../integrations/ai-ml.js";
