@@ -25,14 +25,19 @@ export class EnhancedCassandraClient extends CassandraClient {
     if (config.aiml) {
       this.aimlManager = new RealAIMLManager(config.aiml);
       if (config.aiml.semanticCache?.enabled) {
-        this.semanticCache = new ProductionSemanticCache(this.aimlManager, config.aiml.semanticCache.threshold);
+        this.semanticCache = new ProductionSemanticCache(
+          this.aimlManager, 
+          config.aiml.semanticCache.threshold || 0.85
+        );
       }
     }
 
     // Initialize Performance Optimization if configured
     if (config.performance) {
       this.performanceOptimizer = new AdvancedPerformanceOptimizer(config.performance);
-      this.connectionPool = new ConnectionPoolOptimizer(config.performance.connectionPool);
+      if (config.performance.connectionPool) {
+        this.connectionPool = new ConnectionPoolOptimizer(config.performance.connectionPool);
+      }
     }
 
     // Initialize Distributed Systems if configured
@@ -41,21 +46,74 @@ export class EnhancedCassandraClient extends CassandraClient {
     }
   }
 
-  // Enhanced execute with distributed caching
+  // AI/ML Methods
+  async generateEmbedding(text: string): Promise<number[]> {
+    if (!this.aimlManager) {
+      throw new Error('AI/ML not configured');
+    }
+    return await this.aimlManager.generateEmbedding(text);
+  }
+
+  async optimizeQueryWithAI(query: string): Promise<any> {
+    if (!this.aimlManager) {
+      throw new Error('AI/ML not configured');
+    }
+    return await this.aimlManager.generateQueryOptimization(query);
+  }
+
+  async vectorSimilaritySearch(embedding: number[], threshold: number = 0.8): Promise<any[]> {
+    // Mock implementation for testing
+    return [
+      { id: '1', similarity: 0.95, data: { title: 'Similar document 1' } },
+      { id: '2', similarity: 0.87, data: { title: 'Similar document 2' } }
+    ];
+  }
+
+  // Performance Methods
+  getPerformanceReport(): any {
+    if (!this.performanceOptimizer) {
+      return { error: 'Performance optimizer not configured' };
+    }
+    return this.performanceOptimizer.getPerformanceReport();
+  }
+
+  getConnectionPoolStats(): any {
+    if (!this.connectionPool) {
+      return { error: 'Connection pool not configured' };
+    }
+    return this.connectionPool.getPoolStats();
+  }
+
+  getSemanticCacheStats(): any {
+    if (!this.semanticCache) {
+      return { error: 'Semantic cache not configured' };
+    }
+    return this.semanticCache.getStats();
+  }
+
+  // Enhanced execute with error handling
   async execute(query: string, params: any[] = [], options: any = {}): Promise<any> {
     // Try distributed cache first
     if (this.distributedManager) {
-      const cachedResult = await this.distributedManager.getCachedQuery(query, params);
-      if (cachedResult) {
-        return cachedResult;
+      try {
+        const cachedResult = await this.distributedManager.getCachedQuery(query, params);
+        if (cachedResult) {
+          return cachedResult;
+        }
+      } catch (error) {
+        console.warn('Distributed cache error:', error);
       }
     }
 
     // Try semantic cache
     if (this.semanticCache) {
-      const cachedResult = await this.semanticCache.get(query, params);
-      if (cachedResult) {
-        return cachedResult;
+      try {
+        const cachedResult = await this.semanticCache.get(query, params);
+        if (cachedResult) {
+          return cachedResult;
+        }
+      } catch (error) {
+        console.warn('Semantic cache error:', error);
       }
     }
 
@@ -64,12 +122,16 @@ export class EnhancedCassandraClient extends CassandraClient {
     let optimizedParams = params;
     
     if (this.performanceOptimizer) {
-      const optimization = await this.performanceOptimizer.optimizeQuery(query, params);
-      optimizedQuery = optimization.query;
-      optimizedParams = optimization.params;
-      
-      if (optimization.optimizations.length > 0) {
-        console.log('Query optimizations applied:', optimization.optimizations);
+      try {
+        const optimization = await this.performanceOptimizer.optimizeQuery(query, params);
+        optimizedQuery = optimization.query;
+        optimizedParams = optimization.params;
+        
+        if (optimization.optimizations.length > 0) {
+          console.log('Query optimizations applied:', optimization.optimizations);
+        }
+      } catch (error) {
+        console.warn('Query optimization error:', error);
       }
     }
 
@@ -80,19 +142,32 @@ export class EnhancedCassandraClient extends CassandraClient {
 
     let result;
     if (this.performanceOptimizer) {
-      result = await this.performanceOptimizer.executeWithCache(optimizedQuery, optimizedParams, executeFunction);
+      try {
+        result = await this.performanceOptimizer.executeWithCache(optimizedQuery, optimizedParams, executeFunction);
+      } catch (error) {
+        console.warn('Performance cache error:', error);
+        result = await executeFunction(optimizedQuery, optimizedParams);
+      }
     } else {
       result = await executeFunction(optimizedQuery, optimizedParams);
     }
 
     // Cache result in distributed cache
-    if (this.distributedManager) {
-      await this.distributedManager.setCachedQuery(query, params, result);
+    if (this.distributedManager && result) {
+      try {
+        await this.distributedManager.setCachedQuery(query, params, result);
+      } catch (error) {
+        console.warn('Distributed cache set error:', error);
+      }
     }
 
     // Cache result semantically
-    if (this.semanticCache) {
-      await this.semanticCache.set(query, params, result);
+    if (this.semanticCache && result) {
+      try {
+        await this.semanticCache.set(query, params, result);
+      } catch (error) {
+        console.warn('Semantic cache set error:', error);
+      }
     }
 
     return result;
@@ -160,70 +235,8 @@ export class EnhancedCassandraClient extends CassandraClient {
     }
     return await this.distributedManager.getSystemHealth();
   }
-
-  // AI/ML Methods
-  async generateEmbedding(text: string): Promise<number[]> {
-    if (!this.aimlManager) {
-      throw new Error('AI/ML not configured. Provide aiml config with OpenAI API key.');
-    }
-    return this.aimlManager.generateEmbedding(text);
-  }
-
-  async optimizeQueryWithAI(query: string): Promise<string> {
-    if (!this.aimlManager) {
-      throw new Error('AI/ML not configured');
-    }
-    return this.aimlManager.generateQueryOptimization(query);
-  }
-
-  async vectorSimilaritySearch(embedding: number[], threshold = 0.8): Promise<any[]> {
-    // This would integrate with actual vector storage
-    // For now, return mock results
-    return [
-      { id: '1', similarity: 0.95, data: { title: 'Similar document 1' } },
-      { id: '2', similarity: 0.87, data: { title: 'Similar document 2' } }
-    ];
-  }
-
-  // Performance Methods
-  getPerformanceReport(): any {
-    if (!this.performanceOptimizer) {
-      return { error: 'Performance optimization not configured' };
-    }
-    return this.performanceOptimizer.getPerformanceReport();
-  }
-
-  getConnectionPoolStats(): any {
-    if (!this.connectionPool) {
-      return { error: 'Connection pool not configured' };
-    }
-    return this.connectionPool.getPoolStats();
-  }
-
-  getSemanticCacheStats(): any {
-    if (!this.semanticCache) {
-      return { error: 'Semantic cache not configured' };
-    }
-    return this.semanticCache.getStats();
-  }
-
-  // Enhanced connection management
-  async connect(): Promise<void> {
-    if (this.connectionPool) {
-      await this.connectionPool.acquireConnection();
-    }
-    return super.connect();
-  }
-
-  async shutdown(): Promise<void> {
-    if (this.connectionPool && this.client) {
-      this.connectionPool.releaseConnection(this.client);
-    }
-    return super.shutdown();
-  }
 }
 
-// Factory function for enhanced client
 export function createEnhancedClient(config: EnhancedClientConfig): EnhancedCassandraClient {
   return new EnhancedCassandraClient(config);
 }
