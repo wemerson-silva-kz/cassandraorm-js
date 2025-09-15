@@ -333,9 +333,9 @@ describe('Session 5: Distributed Transactions', () => {
           return { released: true };
         }
 
-        isLocked(resource: string) {
+        isLocked(resource: string): boolean {
           const lock = this.locks.get(resource);
-          return lock && Date.now() < lock.expiresAt;
+          return !!(lock && Date.now() < lock.expiresAt);
         }
 
         getLockInfo(resource: string) {

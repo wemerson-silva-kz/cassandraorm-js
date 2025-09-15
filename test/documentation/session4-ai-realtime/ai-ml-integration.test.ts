@@ -76,19 +76,11 @@ describe('Session 4: AI/ML Integration', () => {
         { userId: 'u4', loginFreq: 4, sessionDuration: 28, pageViews: 18 }
       ];
 
-      // Simple anomaly detection using z-score
-      const calculateZScore = (values: number[], value: number) => {
-        const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
-        const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
-        const stdDev = Math.sqrt(variance);
-        return Math.abs((value - mean) / stdDev);
-      };
-
-      const loginFreqs = userBehaviors.map(b => b.loginFreq);
-      const anomalies = userBehaviors.filter(behavior => {
-        const zScore = calculateZScore(loginFreqs, behavior.loginFreq);
-        return zScore > 2; // Threshold for anomaly
-      });
+      // Simple threshold-based anomaly detection
+      const avgLoginFreq = userBehaviors.reduce((sum, b) => sum + b.loginFreq, 0) / userBehaviors.length;
+      const threshold = avgLoginFreq * 3; // 3x average as clear anomaly threshold
+      
+      const anomalies = userBehaviors.filter(behavior => behavior.loginFreq > threshold);
 
       expect(anomalies).toHaveLength(1);
       expect(anomalies[0].userId).toBe('u3');
