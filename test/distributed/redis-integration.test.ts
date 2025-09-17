@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { RedisDistributedCache, DistributedLockManager } from '../../src/distributed/redis-integration.js';
+import { RedisDistributedCache, DistributedLockManager } from "../../src/distributed/redis-integration";
 
 // Mock Redis client
 const mockRedisClient = {
@@ -15,7 +15,7 @@ const mockRedisClient = {
   set: jest.fn(),
   eval: jest.fn(),
   on: jest.fn()
-};
+} as any;
 
 jest.mock('redis', () => ({
   createClient: jest.fn(() => mockRedisClient)
@@ -177,7 +177,7 @@ describe('Redis Integration', () => {
       mockRedisClient.set.mockResolvedValue('OK');
       mockRedisClient.eval.mockResolvedValue(1);
 
-      const mockFn = jest.fn().mockResolvedValue('result');
+      const mockFn = (jest.fn() as any).mockResolvedValue('result');
 
       const result = await lockManager.withLock('test-resource', mockFn);
       

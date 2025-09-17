@@ -1,236 +1,341 @@
-import { Client, types } from "cassandra-driver";
-import type { CassandraClientOptions, QueryOptions, ModelSchema } from "./types.js";
-import { ConnectionPool } from "../connection/pool.js";
-import { ResilientConnection } from "../connection/resilient-connection.js";
-import { QueryBuilder } from "../query/query-builder.js";
-import { SchemaValidator } from "../validation/schema-validator.js";
-import { AIMLManager, SemanticCache } from "../integrations/ai-ml.js";
-import { EventStore, BaseAggregateRoot, AggregateRepository } from "../integrations/event-sourcing.js";
-import { SubscriptionManager } from "../integrations/subscriptions.js";
-import { DistributedTransactionManager, SagaOrchestrator } from "../integrations/distributed-transactions.js";
+import { Client, types } from 'cassandra-driver';
+import { ConnectionPool } from '../connection/pool.js';
+import { QueryBuilder } from '../query/query-builder.js';
+import { SemanticCache } from '../cache/semantic-cache.js';
+import { AIMLManager } from '../integrations/ai-ml.js';
+import { EventStore } from '../integrations/event-sourcing.js';
+import { SubscriptionManager } from '../integrations/subscriptions.js';
+import { DistributedTransactionManager } from '../integrations/distributed-transactions.js';
+import type { CassandraClientOptions, ModelSchema, QueryOptions } from './types.js';
+
+export class BatchBuilder {
+  private queries: Array<{ query: string; params?: any[] }> = [];
+  
+  constructor(private client: CassandraClient) {}
+  
+  add(query: string, params?: any[]): this {
+    (this as any).queries.push({ query, params });
+    return this;
+  }
+  
+  async execute(): Promise<any> {
+    const batch = (this as any).queries.map(q => ({ query: q.query, params: q.params }));
+    return await ((this as any).client as any).cassandraDriver.batch(batch, { prepare: true });
+  }
+}
+
+export class BaseModel {
+  constructor(
+    private client: CassandraClient,
+    private tableName: string,
+    private schema: ModelSchema
+  ) {}
+
+  private getFullTableName(): string {
+    const keyspace = ((this as any).client as any).clientOptions.keyspace;
+    return keyspace ? `${keyspace}.${(this as any).tableName}` : (this as any).tableName;
+  }
+
+  async save(data: any): Promise<any> {
+    const fields = Object.keys(data);
+    const schema = (this as any).schema;
+    
+    // Convert values according to schema types
+    const values = Object.values(data).map((value, index) => {
+      const fieldName = fields[index];
+      const fieldType = schema.fields[fieldName];
+      
+      if (value instanceof Set) {
+        return Array.from(value);
+      }
+      
+      // Convert decimal values to strings for Cassandra
+      if (fieldType === 'decimal' && typeof value === 'number') {
+        return value.toString();
+      }
+      
+      return value;
+    });
+    
+    const placeholders = fields.map(() => '?').join(', ');
+    
+    const query = `INSERT INTO ${(this as any).getFullTableName()} (${fields.join(', ')}) VALUES (${placeholders})`;
+    await ((this as any).client as any).execute(query, values, { prepare: true });
+    return data;
+  }
+
+  async find(where: any = {}, options: QueryOptions = {}): Promise<any[]> {
+    let query = `SELECT * FROM ${(this as any).getFullTableName()}`;
+    const params: any[] = [];
+    
+    if (Object.keys(where).length > 0) {
+      const conditions = Object.keys(where).map(key => {
+        params.push(where[key]);
+        return `${key} = ?`;
+      });
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+    
+    if (options.limit) {
+      query += ` LIMIT ${options.limit}`;
+    }
+    
+    const result = await ((this as any).client as any).execute(query, params, { prepare: true });
+    return result.rows;
+  }
+
+  async findOne(where: any = {}, options: QueryOptions = {}): Promise<any | null> {
+    const results = await (this as any).find(where, { ...options, limit: 1 });
+    return results.length > 0 ? results[0] : null;
+  }
+
+  async update(where: any, data: any): Promise<void> {
+    const setFields = Object.keys(data);
+    const setValues = Object.values(data);
+    const whereFields = Object.keys(where);
+    const whereValues = Object.values(where);
+    
+    const setClause = setFields.map(field => `${field} = ?`).join(', ');
+    const whereClause = whereFields.map(field => `${field} = ?`).join(' AND ');
+    
+    const query = `UPDATE ${(this as any).getFullTableName()} SET ${setClause} WHERE ${whereClause}`;
+    await ((this as any).client as any).execute(query, [...setValues, ...whereValues], { prepare: true });
+  }
+
+  async count(where: any = {}): Promise<number> {
+    let query = `SELECT COUNT(*) as count FROM ${(this as any).getFullTableName()}`;
+    const params: any[] = [];
+    
+    if (Object.keys(where).length > 0) {
+      const conditions = Object.keys(where).map(key => {
+        params.push(where[key]);
+        return `${key} = ?`;
+      });
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+    
+    const result = await ((this as any).client as any).execute(query, params, { prepare: true });
+    const countValue = result.rows[0]?.count || 0;
+    
+    // Handle Cassandra Long objects
+    if (typeof countValue === 'object' && countValue !== null) {
+      return parseInt(countValue.toString(), 10);
+    }
+    
+    return typeof countValue === 'number' ? countValue : parseInt(countValue?.toString() || '0', 10);
+  }
+
+  async create(data: any): Promise<any> {
+    // Generate UUID for id if not provided
+    if (!data.id && (this as any).schema.fields.id) {
+      data.id = CassandraClient.uuid();
+    }
+    return await (this as any).save(data);
+  }
+
+  async delete(where: any): Promise<void> {
+    const whereFields = Object.keys(where);
+    const whereValues = Object.values(where);
+    const whereClause = whereFields.map(field => `${field} = ?`).join(' AND ');
+    
+    const query = `DELETE FROM ${(this as any).getFullTableName()} WHERE ${whereClause}`;
+    await ((this as any).client as any).execute(query, whereValues, { prepare: true });
+  }
+
+  async delete(where: any): Promise<void> {
+    const fields = Object.keys(where);
+    const values = Object.values(where);
+    const conditions = fields.map(field => `${field} = ?`).join(' AND ');
+    
+    const query = `DELETE FROM ${(this as any).tableName} WHERE ${conditions}`;
+    await ((this as any).client as any).execute(query, values);
+  }
+}
 
 export class CassandraClient {
-  private client: Client | null = null;
-  private connected = false;
+  private cassandraDriver!: Client;
   private connectionPool?: ConnectionPool;
-  
-  // Feature managers
-  public aiml?: AIMLManager;
-  public eventStore?: EventStore;
-  public subscriptions?: SubscriptionManager;
-  public transactions?: DistributedTransactionManager;
-  public sagas?: SagaOrchestrator;
-  public semanticCache?: SemanticCache;
-  
-  // Monitoring
-  public queryMetrics: any[] = [];
-  public connectionMetrics = {
-    totalQueries: 0,
-    avgResponseTime: 0,
-    errorRate: 0
-  };
+  private semanticCache?: SemanticCache;
+  private queryMetrics: any[] = [];
+  private aiml?: AIMLManager;
+  private eventStore?: EventStore;
+  private subscriptions?: SubscriptionManager;
+  private transactions?: DistributedTransactionManager;
+  private clientOptions: any;
+  private ormOptions: any;
 
-  constructor(private options: CassandraClientOptions) {}
+  constructor(options: CassandraClientOptions) {
+    this.clientOptions = options.clientOptions || {};
+    this.ormOptions = options.ormOptions || {};
+    
+    // Create connection options without keyspace initially
+    const connectionOptions = { ...this.clientOptions };
+    delete connectionOptions.keyspace; // Remove keyspace from initial connection
+    
+    (this as any).cassandraDriver = new Client(connectionOptions);
+  }
 
-  get driver() {
-    return this.client;
+  // Add missing properties as getters
+  get driver(): Client {
+    return this.cassandraDriver;
+  }
+
+  get consistencies() {
+    return types.consistencies;
+  }
+
+  get datatypes() {
+    return types;
+  }
+
+  // Static UUID methods
+  static uuid(): string {
+    return types.Uuid.random().toString();
+  }
+
+  static timeuuid(): string {
+    return types.TimeUuid.now().toString();
+  }
+
+  static uuidFromString(str: string): string {
+    return types.Uuid.fromString(str).toString();
+  }
+
+  // Instance UUID methods for backward compatibility
+  uuid(): string {
+    return CassandraClient.uuid();
+  }
+
+  timeuuid(): string {
+    return CassandraClient.timeuuid();
+  }
+
+  uuidFromString(str: string): string {
+    return CassandraClient.uuidFromString(str);
+  }
+
+  getConnectionState(): any {
+    const driver = (this as any).cassandraDriver;
+    const state = driver ? driver.getState() : null;
+    
+    return {
+      connected: state && state.getConnectedHosts().length > 0,
+      hosts: state ? state.getConnectedHosts().map((h: any) => h.address) : [],
+      keyspace: (this as any).clientOptions.keyspace,
+      errorRate: 0,
+      avgLatency: 0
+    };
+  }
+
+  isConnected(): boolean {
+    const driver = (this as any).cassandraDriver;
+    const state = driver ? driver.getState() : null;
+    return state && state.getConnectedHosts().length > 0;
+  }
+
+  createBatch(): any {
+    const driver = (this as any).cassandraDriver;
+    const queries: any[] = [];
+    
+    return {
+      add: (query: string, params?: any[]) => {
+        queries.push({ query, params });
+      },
+      execute: async () => {
+        return await driver.batch(queries, { prepare: true });
+      }
+    };
   }
 
   async connect(): Promise<void> {
-    const clientOptions = { ...this.options.clientOptions };
-    const keyspace = clientOptions.keyspace;
-    delete clientOptions.keyspace;
-    
-    // Add basic connection pool settings
-    const poolOptions = {
-      ...clientOptions,
-      pooling: {
-        coreConnectionsPerHost: { '0': 2, '1': 1 }
+    try {
+      await (this as any).cassandraDriver.connect();
+      
+      if ((this as any).ormOptions.createKeyspace && (this as any).clientOptions.keyspace) {
+        await (this as any).createKeyspace();
       }
-    };
-    
-    this.client = new Client(poolOptions);
-    await this.client.connect();
-    
-    // Create keyspace if requested
-    if (keyspace && this.options.ormOptions?.createKeyspace) {
-      const createKeyspaceQuery = `
-        CREATE KEYSPACE IF NOT EXISTS ${keyspace}
-        WITH REPLICATION = {
-          'class': 'SimpleStrategy',
-          'replication_factor': 1
-        }
-      `;
-      await this.client.execute(createKeyspaceQuery);
-    }
-    
-    // Use keyspace
-    if (keyspace) {
-      await this.client.execute(`USE ${keyspace}`);
-    }
-    
-    this.connected = true;
-    
-    // Initialize essential features
-    if (keyspace) {
-      await this.initializeEssentialFeatures();
-    }
-  }
-
-  private async initializeEssentialFeatures(): Promise<void> {
-    const keyspace = this.options.clientOptions.keyspace;
-    if (!keyspace || !this.client) return;
-
-    // Initialize only semantic cache for tests to avoid table creation issues
-    this.semanticCache = new SemanticCache({ similarityThreshold: 0.85 });
-    
-    // Initialize other features only if explicitly requested
-    if (this.options.ormOptions?.enableAdvancedFeatures) {
-      try {
-        this.aiml = new AIMLManager(this.client, keyspace);
-        this.eventStore = new EventStore(this.client, { keyspace });
-        this.subscriptions = new SubscriptionManager(this.client, keyspace);
-        this.transactions = new DistributedTransactionManager(this.client, keyspace);
-        this.sagas = new SagaOrchestrator(this.client, keyspace);
-      } catch (error) {
-        console.warn('Advanced features initialization failed:', error.message);
-      }
+      
+      await (this as any).initializeEssentialFeatures();
+    } catch (error: any) {
+      throw new Error(`Connection failed: ${error.message}`);
     }
   }
 
   async disconnect(): Promise<void> {
-    if (this.client) {
-      await this.client.shutdown();
-      this.client = null;
-      this.connected = false;
+    if ((this as any).cassandraDriver) {
+      await (this as any).cassandraDriver.shutdown();
     }
   }
 
-  isConnected(): boolean {
-    return this.connected && this.client !== null;
+  private async createKeyspace(): Promise<void> {
+    const keyspace = (this as any).clientOptions.keyspace;
+    const query = `CREATE KEYSPACE IF NOT EXISTS ${keyspace} WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}`;
+    await (this as any).cassandraDriver.execute(query);
+    // Don't use the keyspace here - let individual queries specify it
   }
 
-  getQueryMetrics(): any[] {
-    return this.queryMetrics;
+  private async initializeEssentialFeatures(): Promise<void> {
+    const keyspace = (this as any).clientOptions.keyspace;
+    if (!keyspace || !(this as any).cassandraDriver) return;
+
+    (this as any).semanticCache = new SemanticCache({ similarityThreshold: 0.85 });
+    
+    if ((this as any).ormOptions.migration) {
+      try {
+        (this as any).aiml = new AIMLManager((this as any).cassandraDriver, keyspace);
+        (this as any).eventStore = new EventStore((this as any).cassandraDriver, { keyspace });
+        (this as any).subscriptions = new SubscriptionManager((this as any).cassandraDriver, keyspace);
+        (this as any).transactions = new DistributedTransactionManager((this as any).cassandraDriver, keyspace);
+      } catch (error: any) {
+        throw new Error(`Feature initialization failed: ${error.message}`);
+      }
+    }
   }
 
-  getConnectionState(): any {
-    return {
-      connected: this.isConnected(),
-      hosts: this.client?.hosts?.length || 0,
-      keyspace: this.options.clientOptions.keyspace,
-      queryCount: this.queryMetrics.length,
-      avgQueryTime: this.getAverageQueryTime(),
-      errorRate: this.calculateErrorRate()
-    };
-  }
-
-  private getAverageQueryTime(): number {
-    if (this.queryMetrics.length === 0) return 0;
-    const total = this.queryMetrics.reduce((sum, m) => sum + (m.duration || 0), 0);
-    return total / this.queryMetrics.length;
-  }
-
-  private calculateErrorRate(): number {
-    if (this.queryMetrics.length === 0) return 0;
-    const errors = this.queryMetrics.filter(m => m.error).length;
-    return errors / this.queryMetrics.length;
-  }
-
-  // Query builder
   query(table?: string): QueryBuilder {
     const builder = new QueryBuilder(this);
     return table ? builder.from(table) : builder;
   }
 
-  // Batch builder
   createBatch(): BatchBuilder {
     return new BatchBuilder(this);
   }
 
-  async execute(query: string, params: any[] = [], options: QueryOptions = {}): Promise<any> {
-    if (!this.client) throw new Error('Client not connected');
-    
+  async execute(query: string, params?: any[], options?: any): Promise<any> {
     const startTime = Date.now();
+    
     try {
-      // Convert JavaScript collections to Cassandra types
-      const processedParams = params.map(param => {
-        if (param instanceof Set) {
-          return Array.from(param);
-        }
-        if (param instanceof Map) {
-          return Object.fromEntries(param);
-        }
-        if (param && typeof param === 'object' && param.constructor === Object) {
-          // Convert plain objects to JSON string for text fields
-          return JSON.stringify(param);
-        }
-        return param;
-      });
-
-      // Execute directly with driver
-      const result = await this.client.execute(query, processedParams, options as any);
+      const result = await (this as any).cassandraDriver.execute(query, params, options);
       
-      // Performance monitoring
       const duration = Date.now() - startTime;
-      this.queryMetrics.push({
-        query: query.substring(0, 100),
+      (this as any).queryMetrics.push({
+        query,
         duration,
-        timestamp: new Date(),
-        success: true
+        timestamp: new Date()
       });
-      this.connectionMetrics.totalQueries++;
       
       return result;
-    } catch (error) {
+    } catch (error: any) {
       const duration = Date.now() - startTime;
-      this.queryMetrics.push({
-        query: query.substring(0, 100),
+      (this as any).queryMetrics.push({
+        query,
         duration,
         timestamp: new Date(),
-        success: false,
-        error: (error as Error).message
+        error: error.message
       });
       throw error;
     }
   }
 
-  createBatch(): BatchBuilder {
-    return new BatchBuilder(this);
-  }
-
-  async batch(queries: Array<{ query: string; params: any[] }>, options: QueryOptions = {}): Promise<any> {
-    if (!this.client) throw new Error('Client not connected');
-    
+  async executeBatch(queries: Array<{ query: string; params?: any[] }>): Promise<any> {
     const startTime = Date.now();
     
     try {
-      // Process parameters for each query
-      const processedQueries = queries.map(({ query, params }) => ({
-        query,
-        params: params.map(param => {
-          if (param instanceof Set) {
-            return Array.from(param);
-          }
-          if (param instanceof Map) {
-            return Object.fromEntries(param);
-          }
-          // Handle UUID strings properly
-          if (typeof param === 'string' && param.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            return types.Uuid.fromString(param);
-          }
-          return param;
-        })
-      }));
+      const batch = queries.map(q => ({ query: q.query, params: q.params }));
+      const result = await (this as any).cassandraDriver.batch(batch, { prepare: true });
       
-      const result = await this.client.batch(processedQueries, { 
-        prepare: true,
-        ...options 
-      });
-      
-      // Track metrics
       const duration = Date.now() - startTime;
-      this.queryMetrics.push({
+      (this as any).queryMetrics.push({
         query: `BATCH (${queries.length} queries)`,
         duration,
         timestamp: new Date()
@@ -239,7 +344,7 @@ export class CassandraClient {
       return result;
     } catch (error: any) {
       const duration = Date.now() - startTime;
-      this.queryMetrics.push({
+      (this as any).queryMetrics.push({
         query: `BATCH (${queries.length} queries)`,
         duration,
         timestamp: new Date(),
@@ -249,80 +354,48 @@ export class CassandraClient {
     }
   }
 
-  async loadSchema(tableName: string, schema: ModelSchema): Promise<any> {
-    // Create table if it doesn't exist
-    await this.createTableFromSchema(tableName, schema);
+  async loadSchema(tableName: string, schema: ModelSchema): Promise<BaseModel> {
+    if ((this as any).ormOptions.migration === 'drop') {
+      await (this as any).dropTable(tableName);
+    }
     
-    const model = new BaseModel(this, tableName, schema);
-    
-    // Create a constructor function that acts like a class
-    const ModelConstructor = function(data?: any) {
-      if (data) {
-        Object.assign(this, data);
-      }
-    };
-    
-    // Add static methods
-    ModelConstructor.create = async (data: any, options: any = {}) => {
-      return model.create(data, options);
-    };
-    
-    ModelConstructor.findOne = async (query: any = {}, options: any = {}) => {
-      return model.findOne(query, options);
-    };
-    
-    ModelConstructor.find = async (query: any = {}, options: any = {}) => {
-      return model.find(query, options);
-    };
-    
-    ModelConstructor.count = async (query: any = {}) => {
-      return model.count(query);
-    };
-    
-    ModelConstructor.update = async (query: any, updateData: any, options: any = {}) => {
-      return model.update(query, updateData, options);
-    };
-    
-    ModelConstructor.delete = async (query: any, options: any = {}) => {
-      return model.delete(query, options);
-    };
-    
-    // Add instance methods to prototype
-    ModelConstructor.prototype.save = function(options: any = {}) {
-      return model.save(this, options);
-    };
-    
-    return ModelConstructor;
+    await (this as any).createTable(tableName, schema);
+    return new BaseModel(this, tableName, schema);
   }
 
-  private async createTableFromSchema(tableName: string, schema: ModelSchema): Promise<void> {
+  private async dropTable(tableName: string): Promise<void> {
+    const keyspace = (this as any).clientOptions.keyspace;
+    const fullTableName = keyspace ? `${keyspace}.${tableName}` : tableName;
+    
+    try {
+      await (this as any).execute(`DROP TABLE IF EXISTS ${fullTableName}`);
+    } catch (error) {
+      // Ignore errors if table doesn't exist
+    }
+  }
+
+  private async createTable(tableName: string, schema: ModelSchema): Promise<void> {
+    const keyspace = (this as any).clientOptions.keyspace;
     const columns = [];
     const primaryKey = Array.isArray(schema.key) ? schema.key : [schema.key];
     
-    // Process fields
     for (const [fieldName, fieldDef] of Object.entries(schema.fields)) {
       const fieldType = typeof fieldDef === 'string' ? fieldDef : fieldDef.type;
-      const cqlType = this.mapToCQLType(fieldType);
+      const cqlType = (this as any).mapToCQLType(fieldType);
       columns.push(`${fieldName} ${cqlType}`);
     }
     
-    // Since we use "USE keyspace", just use table name
-    const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS ${tableName} (
-        ${columns.join(', ')},
-        PRIMARY KEY (${primaryKey.join(', ')})
-      )
-    `;
+    const fullTableName = keyspace ? `${keyspace}.${tableName}` : tableName;
+    const createTableQuery = `CREATE TABLE IF NOT EXISTS ${fullTableName} (${columns.join(', ')}, PRIMARY KEY (${primaryKey.join(', ')}))`;
     
-    await this.execute(createTableQuery);
+    await (this as any).execute(createTableQuery);
   }
 
   private mapToCQLType(type: string): string {
     const typeMap: Record<string, string> = {
-      'text': 'text',
-      'varchar': 'text',
       'uuid': 'uuid',
-      'timeuuid': 'timeuuid',
+      'text': 'text',
+      'varchar': 'varchar',
       'int': 'int',
       'bigint': 'bigint',
       'float': 'float',
@@ -331,356 +404,66 @@ export class CassandraClient {
       'timestamp': 'timestamp',
       'date': 'date',
       'time': 'time',
+      'blob': 'blob',
+      'inet': 'inet',
+      'counter': 'counter',
       'set<text>': 'set<text>',
       'list<text>': 'list<text>',
-      'map<text,text>': 'map<text,text>',
-      'frozen<set<text>>': 'frozen<set<text>>'
+      'map<text,text>': 'map<text,text>'
     };
     
     return typeMap[type] || 'text';
   }
 
-  // Instance UUID methods for convenience
-  uuid(): string {
-    return CassandraClient.uuid().toString();
+  getQueryMetrics(): any[] {
+    return (this as any).queryMetrics;
   }
 
-  generateUuid(): string {
-    return this.uuid();
-  }
-
-  timeuuid(): string {
-    return CassandraClient.timeuuid().toString();
-  }
-
-  uuidFromString(str: string): string {
-    return str; // Simple implementation for testing
-  }
-
-  uuidFromBuffer(buffer: Buffer): string {
-    return buffer.toString('hex');
-  }
-
-  timeuuidFromDate(date: Date): string {
-    return CassandraClient.timeuuid().toString();
-  }
-
-  timeuuidFromString(str: string): string {
-    return str;
-  }
-
-  timeuuidFromBuffer(buffer: Buffer): string {
-    return buffer.toString('hex');
-  }
-
-  maxTimeuuid(date?: Date): string {
-    return CassandraClient.timeuuid().toString();
-  }
-
-  minTimeuuid(date?: Date): string {
-    return CassandraClient.timeuuid().toString();
-  }
-
-  // Export/Import functionality
-  export(options?: any) {
-    if (!this.isConnected()) {
-      throw new Error('Cannot export data: client is not connected');
-    }
-    // Implementation would go here
-    return { success: true, message: 'Export functionality available' };
-  }
-
-  import(data: any, options?: any) {
-    if (!this.isConnected()) {
-      throw new Error('Cannot import data: client is not connected');
-    }
-    // Implementation would go here
-    return { success: true, message: 'Import functionality available' };
-  }
-
-  private elassandraEnabled = false;
-
-  // Elassandra support
-  enableElassandra(options?: any) {
-    this.elassandraEnabled = true;
-    return { success: true, message: 'Elassandra enabled' };
-  }
-
-  search(query: string | any, options?: any) {
-    if (!this.elassandraEnabled) {
-      throw new Error('Elassandra is not enabled. Call enableElassandra() first.');
-    }
-    if (!this.isConnected()) {
-      throw new Error('Cannot search: client is not connected');
-    }
-    return { results: [], total: 0 };
-  }
-
-  // Client properties
-  get consistencies() {
-    return {
-      one: 1,
-      two: 2,
-      three: 3,
-      quorum: 4,
-      all: 5,
-      localQuorum: 6,
-      eachQuorum: 7,
-      serial: 8,
-      localSerial: 9,
-      localOne: 10
-    };
-  }
-
-  get datatypes() {
-    return {
-      text: 'text',
-      varchar: 'varchar',
-      int: 'int',
-      bigint: 'bigint',
-      uuid: 'uuid',
-      timeuuid: 'timeuuid',
-      boolean: 'boolean',
-      timestamp: 'timestamp',
-      date: 'date',
-      time: 'time',
-      decimal: 'decimal',
-      double: 'double',
-      float: 'float'
-    };
-  }
-
-  get driver() {
-    return this.client;
-  }
-
-  get instance() {
-    return this;
-  }
-
-  // Batch operations
-  doBatch(queries: any[], options?: any): Promise<any> {
-    if (!this.isConnected()) {
-      throw new Error('Cannot execute batch: client is not connected');
-    }
-    return Promise.resolve({ success: true });
-  }
-
-  // Table operations
-  getTableList(): Promise<string[]> {
-    if (!this.isConnected()) {
-      throw new Error('Cannot get table list: client is not connected');
-    }
-    return Promise.resolve(['users', 'posts', 'sessions']);
-  }
-
-  // Advanced streaming
-  eachRow(query: string, params: any[] = [], options: any = {}, rowCallback: (n: number, row: any) => void, endCallback?: (error?: Error, result?: any) => void) {
-    if (!this.isConnected()) {
-      throw new Error('Cannot stream rows: client is not connected');
-    }
-    // Simulate streaming for testing
-    setTimeout(() => {
-      rowCallback(0, { id: 'test', name: 'Test Row' });
-      if (endCallback) endCallback(null, { rowLength: 1 });
-    }, 10);
-  }
-
-  streamQuery(query: string, params: any[] = [], options: any = {}) {
-    if (!this.isConnected()) {
-      throw new Error('Cannot stream query: client is not connected');
-    }
-    // Return a mock stream-like object
-    return {
-      on: (event: string, callback: Function) => {
-        if (event === 'data') {
-          setTimeout(() => callback({ id: 'test', name: 'Test Row' }), 10);
-        } else if (event === 'end') {
-          setTimeout(() => callback(), 20);
-        }
-      }
-    };
+  clearQueryMetrics(): void {
+    (this as any).queryMetrics = [];
   }
 
   async shutdown(): Promise<void> {
-    if (this.client) {
-      await this.client.shutdown();
-      this.client = null;
+    if ((this as any).connectionPool) {
+      await ((this as any).connectionPool as any).shutdown();
+    }
+    
+    if ((this as any).cassandraDriver) {
+      await (this as any).cassandraDriver.shutdown();
     }
   }
 
-  // Static utility methods
-  static uuid = types.Uuid.random;
-  static uuidFromString = types.Uuid.fromString;
-  static uuidFromBuffer = (buffer: Buffer) => types.Uuid.fromString(buffer.toString());
-  static timeuuid = types.TimeUuid.now;
-  static timeuuidFromDate = types.TimeUuid.fromDate;
-  static timeuuidFromString = types.TimeUuid.fromString;
-  static timeuuidFromBuffer = (buffer: Buffer) => types.TimeUuid.fromString(buffer.toString());
-  static maxTimeuuid = (date: Date) => types.TimeUuid.max(date, 0);
-  static minTimeuuid = (date: Date) => types.TimeUuid.min(date, 0);
-}
-
-export class BatchBuilder {
-  private queries: Array<{ query: string; params: any[] }> = [];
-
-  constructor(private client: CassandraClient) {}
-
-  add(query: string, params: any[] = []): this {
-    this.queries.push({ query, params });
-    return this;
+  static timeuuidFromString(str: string): string {
+    return types.TimeUuid.fromString(str).toString();
   }
 
-  async execute(): Promise<any> {
-    return this.client.batch(this.queries);
-  }
-}
-
-export class BaseModel {
-  private validator?: SchemaValidator;
-
-  constructor(
-    private client: CassandraClient,
-    private tableName: string,
-    private schema: ModelSchema
-  ) {
-    // Initialize validator if validation rules exist
-    const validationRules: Record<string, any> = {};
-    for (const [field, def] of Object.entries(schema.fields)) {
-      if (typeof def === 'object' && def.validate) {
-        validationRules[field] = def.validate;
-      }
-    }
-    
-    if (Object.keys(validationRules).length > 0) {
-      this.validator = new SchemaValidator(validationRules);
-    }
+  static timeuuidFromBuffer(buffer: Buffer): string {
+    // Convert buffer to UUID string format
+    const hex = buffer.toString('hex');
+    const formatted = `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20,32)}`;
+    return types.TimeUuid.fromString(formatted).toString();
   }
 
-  // Static method for creating instances
-  static create(data: any): Promise<any> {
-    throw new Error('create method should be called on model instance, not BaseModel');
+  static maxTimeuuid(date: Date): string {
+    return types.TimeUuid.max(date, 0).toString();
   }
 
-  private getFullTableName(): string {
-    // Since we use "USE keyspace", just return table name
-    return this.tableName;
+  static minTimeuuid(date: Date): string {
+    return types.TimeUuid.min(date, 0).toString();
   }
 
-  async save(data: any, options: any = {}): Promise<any> {
-    // Validate data
-    if (this.validator) {
-      const errors = this.validator.validate(data);
-      if (errors.length > 0) {
-        throw new Error(`Validation failed: ${errors.map(e => e.message).join(', ')}`);
-      }
-    }
-    
-    const fields = Object.keys(data).join(', ');
-    const placeholders = Object.keys(data).map(() => '?').join(', ');
-    const query = `INSERT INTO ${this.getFullTableName()} (${fields}) VALUES (${placeholders})`;
-    
-    // Process values for Cassandra
-    const params = Object.values(data).map(value => {
-      if (value instanceof Set) {
-        return Array.from(value);
-      }
-      if (value instanceof Map) {
-        return Object.fromEntries(value);
-      }
-      return value;
-    });
-    
-    const result = await this.client.execute(query, params, { ...options, prepare: true });
-    
-    // Log change for subscriptions
-    if (this.client.subscriptions) {
-      await this.client.subscriptions.logChange(this.tableName, 'insert', data);
-    }
-    
-    return data;
+  static uuidFromBuffer(buffer: Buffer): string {
+    // Convert buffer to UUID string format
+    const hex = buffer.toString('hex');
+    const formatted = `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20,32)}`;
+    return types.Uuid.fromString(formatted).toString();
   }
 
-  async create(data: any, options: any = {}): Promise<any> {
-    return this.save(data, options);
+  static timeuuidFromDate(date: Date): string {
+    return types.TimeUuid.fromDate(date).toString();
   }
 
-  async findOne(query: any = {}, options: any = {}): Promise<any> {
-    const whereClause = Object.keys(query).length > 0 
-      ? 'WHERE ' + Object.keys(query).map(key => `${key} = ?`).join(' AND ')
-      : '';
-    
-    // Add ALLOW FILTERING for non-key queries
-    const allowFiltering = Object.keys(query).length > 0 ? ' ALLOW FILTERING' : '';
-    const cqlQuery = `SELECT * FROM ${this.getFullTableName()} ${whereClause}${allowFiltering} LIMIT 1`;
-    const params = Object.values(query);
-    
-    const result = await this.client.execute(cqlQuery, params, options);
-    return result.rows[0] || null;
-  }
-
-  async find(query: any = {}, options: any = {}): Promise<any[]> {
-    const whereClause = Object.keys(query).length > 0 
-      ? 'WHERE ' + Object.keys(query).map(key => `${key} = ?`).join(' AND ')
-      : '';
-    
-    // Add ALLOW FILTERING for non-key queries
-    const allowFiltering = Object.keys(query).length > 0 ? ' ALLOW FILTERING' : '';
-    const cqlQuery = `SELECT * FROM ${this.getFullTableName()} ${whereClause}${allowFiltering}`;
-    const params = Object.values(query);
-    
-    const result = await this.client.execute(cqlQuery, params, { ...options, prepare: true });
-    return result.rows || [];
-  }
-
-  async update(query: any, updateData: any, options: any = {}): Promise<any> {
-    // Validate update data
-    if (this.validator) {
-      const errors = this.validator.validate(updateData);
-      if (errors.length > 0) {
-        throw new Error(`Validation failed: ${errors.map(e => e.message).join(', ')}`);
-      }
-    }
-    
-    const setClause = Object.keys(updateData).map(key => `${key} = ?`).join(', ');
-    const whereClause = Object.keys(query).map(key => `${key} = ?`).join(' AND ');
-    const cqlQuery = `UPDATE ${this.tableName} SET ${setClause} WHERE ${whereClause}`;
-    const params = [...Object.values(updateData), ...Object.values(query)];
-    
-    await this.client.execute(cqlQuery, params, options);
-    
-    // Log change for subscriptions
-    if (this.client.subscriptions) {
-      await this.client.subscriptions.logChange(this.tableName, 'update', { ...query, ...updateData });
-    }
-    
-    return updateData;
-  }
-
-  async count(query: any = {}): Promise<number> {
-    const whereClause = Object.keys(query).length > 0 
-      ? 'WHERE ' + Object.keys(query).map(key => `${key} = ?`).join(' AND ')
-      : '';
-    
-    // Add ALLOW FILTERING for non-key queries
-    const allowFiltering = Object.keys(query).length > 0 ? ' ALLOW FILTERING' : '';
-    const cqlQuery = `SELECT COUNT(*) FROM ${this.getFullTableName()} ${whereClause}${allowFiltering}`;
-    const params = Object.values(query);
-    
-    const result = await this.client.execute(cqlQuery, params, { prepare: true });
-    return parseInt(result.rows?.[0]?.count) || 0;
-  }
-
-  async delete(query: any, options: any = {}): Promise<void> {
-    const whereClause = Object.keys(query).map(key => `${key} = ?`).join(' AND ');
-    const cqlQuery = `DELETE FROM ${this.tableName} WHERE ${whereClause}`;
-    const params = Object.values(query);
-    
-    await this.client.execute(cqlQuery, params, options);
-    
-    // Log change for subscriptions
-    if (this.client.subscriptions) {
-      await this.client.subscriptions.logChange(this.tableName, 'delete', query);
-    }
+  static timeuuidFromString(str: string): string {
+    return types.TimeUuid.fromString(str).toString();
   }
 }

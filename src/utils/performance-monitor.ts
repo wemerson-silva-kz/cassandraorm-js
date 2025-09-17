@@ -73,7 +73,7 @@ export class ConnectionHealthMonitor {
       });
       
       return status;
-    } catch (error) {
+    } catch (error: any) {
       const status = {
         healthy: false,
         timestamp: new Date(),
@@ -115,7 +115,7 @@ export class MetricsCollector {
       try {
         const value = await collectorFn();
         this.recordMetric(name, value);
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error collecting metric ${name}:`, error);
       }
     }, this.options.interval);

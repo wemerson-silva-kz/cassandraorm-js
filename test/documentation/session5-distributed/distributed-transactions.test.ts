@@ -181,7 +181,7 @@ describe('Session 5: Distributed Transactions', () => {
 
           } catch (error) {
             saga.status = 'failed';
-            saga.error = error;
+            (saga as any).error = error;
 
             // Execute compensations in reverse order
             await this.compensate(sagaId);

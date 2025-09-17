@@ -13,12 +13,22 @@ export class TestHelpers {
         },
         ormOptions: {
           createKeyspace: true,
-          migration: 'safe'
+          migration: 'drop' // Force table recreation
         }
       });
       await this.client.connect();
     }
     return this.client;
+  }
+
+  static async cleanup(client?: any) {
+    if (client) {
+      await client.disconnect();
+    }
+    if (this.client) {
+      await this.client.disconnect();
+      this.client = null;
+    }
   }
 
   static async cleanup() {

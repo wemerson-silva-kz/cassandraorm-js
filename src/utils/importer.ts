@@ -54,7 +54,7 @@ export class DataImporter {
     }
   }
 
-  private deserializeValue(value: unknown): CassandraValue {
+  private deserializeValue(value: unknown): any {
     if (value === null || value === undefined) return value;
     
     if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {

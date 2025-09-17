@@ -31,8 +31,8 @@ describe('Session 1: Connection Management', () => {
     it('should configure connection pool', async () => {
       const state = client.getConnectionState();
       expect(state.connected).toBe(true);
-      expect(state.hosts).toBeGreaterThanOrEqual(1);
-      expect(typeof state.queryCount).toBe('number');
+      expect(state.hosts.length).toBeGreaterThanOrEqual(1);
+      expect(typeof state.errorRate).toBe('number');
     });
   });
 

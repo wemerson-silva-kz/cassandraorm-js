@@ -174,34 +174,6 @@ export class SemanticCache {
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
-  private async generateQueryEmbedding(query: string, params: any[]): Promise<number[]> {
-    // Normalize query with parameters
-    const normalizedQuery = this.normalizeQuery(query, params);
-    
-    // Simple embedding generation (in production, use actual ML models)
-    const words = normalizedQuery.toLowerCase().split(/\s+/);
-    const embedding = new Array(this.config.embeddingDimensions).fill(0);
-    
-    // Hash-based embedding with semantic awareness
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
-      const wordWeight = this.getWordWeight(word);
-      
-      for (let j = 0; j < word.length; j++) {
-        const charCode = word.charCodeAt(j);
-        const index = (charCode + i + j) % this.config.embeddingDimensions;
-        embedding[index] += Math.sin(charCode * 0.1) * wordWeight;
-      }
-    }
-
-    // Add query structure information
-    this.addStructuralFeatures(embedding, query);
-
-    // Normalize
-    const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
-    return norm > 0 ? embedding.map(val => val / norm) : embedding;
-  }
-
   private getWordWeight(word: string): number {
     // Give higher weights to important SQL keywords and operations
     const importantWords = {

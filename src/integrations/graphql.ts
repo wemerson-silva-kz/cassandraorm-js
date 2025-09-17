@@ -173,25 +173,23 @@ export class GraphQLSchemaGenerator {
       return context.dataSources[name].find({ where, limit, offset });
     };
 
-    return resolvers;
-
     // Mutation resolvers
     if (this.config.mutations.includes('create')) {
-      resolvers[`create${typeName}`] = async (parent: any, args: any, context: any) => {
+      resolvers.Mutation[`create${typeName}`] = async (parent: any, args: any, context: any) => {
         const { input } = args;
         return context.dataSources[name].create(input);
       };
     }
 
     if (this.config.mutations.includes('update')) {
-      resolvers[`update${typeName}`] = async (parent: any, args: any, context: any) => {
+      resolvers.Mutation[`update${typeName}`] = async (parent: any, args: any, context: any) => {
         const { id, input } = args;
         return context.dataSources[name].update(id, input);
       };
     }
 
     if (this.config.mutations.includes('delete')) {
-      resolvers[`delete${typeName}`] = async (parent: any, args: any, context: any) => {
+      resolvers.Mutation[`delete${typeName}`] = async (parent: any, args: any, context: any) => {
         const { id } = args;
         return context.dataSources[name].delete(id);
       };
@@ -215,6 +213,7 @@ export class GraphQLSchemaGenerator {
     }
 
     this.resolvers.set(name, resolvers);
+    return resolvers;
   }
 
   generateSchema(): string {

@@ -93,7 +93,7 @@ export class CassandraORM {
 
   async shutdown(): Promise<void> {
     if (this.client) {
-      await this.connectionPool.closeAll();
+      await this.connectionPool.shutdown();
       this.monitor.log('info', 'Connection closed');
     }
   }

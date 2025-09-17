@@ -109,7 +109,9 @@ export class QueryBuilder {
     this.selectFields = ['COUNT(*)'];
     const result = await this.execute();
     this.selectFields = originalFields;
-    return result.rows[0]['count'];
+    
+    const countValue = result.rows[0]['count'] || result.rows[0]['COUNT(*)'] || result.rows[0][Object.keys(result.rows[0])[0]];
+    return typeof countValue === 'number' ? countValue : parseInt(countValue?.toString() || '0', 10);
   }
 
   // Collection operations

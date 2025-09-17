@@ -116,7 +116,7 @@ export class DistributedTransactionManager extends EventEmitter {
 
       transaction.status = TransactionStatus.COMMITTED;
       this.emit('transaction:committed', transactionId);
-    } catch (error) {
+    } catch (error: any) {
       await this.abortTransaction(transactionId);
       throw error;
     } finally {
@@ -146,7 +146,7 @@ export class DistributedTransactionManager extends EventEmitter {
 
       transaction.status = TransactionStatus.ABORTED;
       this.emit('transaction:aborted', transactionId);
-    } catch (error) {
+    } catch (error: any) {
       transaction.status = TransactionStatus.FAILED;
       this.emit('transaction:failed', transactionId, error);
     } finally {
@@ -205,6 +205,8 @@ export class SagaOrchestrator extends EventEmitter {
     currentStep: number;
     completedSteps: string[];
     status: 'running' | 'completed' | 'failed' | 'compensating';
+    startTime: Date;
+    error?: Error;
   }>();
 
   constructor(private client: Client, private keyspace: string) {
@@ -233,7 +235,8 @@ export class SagaOrchestrator extends EventEmitter {
       steps,
       currentStep: 0,
       completedSteps: [],
-      status: 'running' as const
+      status: 'running' as const,
+      startTime: new Date()
     };
 
     this.sagas.set(sagaId, saga);
@@ -241,7 +244,7 @@ export class SagaOrchestrator extends EventEmitter {
     try {
       await this.executeNextStep(sagaId);
       return sagaId;
-    } catch (error) {
+    } catch (error: any) {
       await this.compensateSaga(sagaId);
       throw error;
     }
@@ -275,12 +278,13 @@ export class SagaOrchestrator extends EventEmitter {
         // Execute next step
         await this.executeNextStep(sagaId);
         return;
-      } catch (error) {
+      } catch (error: any) {
         retries--;
         
         if (retries < 0) {
           // Log failed step
           await this.logSagaStep(sagaId, step.id, 'failed', null, error.message);
+          saga.error = error;
           throw error;
         }
         
@@ -307,7 +311,7 @@ export class SagaOrchestrator extends EventEmitter {
         try {
           await step.compensation();
           await this.logSagaStep(sagaId, step.id, 'compensated');
-        } catch (error) {
+        } catch (error: any) {
           await this.logSagaStep(sagaId, step.id, 'compensation_failed', null, error.message);
         }
       }

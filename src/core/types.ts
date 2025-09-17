@@ -84,6 +84,10 @@ export interface CassandraClientOptions {
   ormOptions?: {
     createKeyspace?: boolean;
     migration?: 'safe' | 'alter' | 'drop';
+    defaultReplicationStrategy?: {
+      class: string;
+      replication_factor?: number;
+    };
   };
 }
 
@@ -267,7 +271,7 @@ export interface ModelStatic<T = BaseModelInstance> {
   delete(query: FindQuery, options?: QueryOptions): Promise<any>;
   deleteAsync(query: FindQuery, options?: QueryOptions): Promise<any>;
   stream(query?: FindQuery, options?: StreamOptions): NodeJS.ReadableStream;
-  eachRow(query: FindQuery, options: any, rowCallback: Function, callback?: Function): void;
+  eachRow(query: FindQuery, options: any, rowCallback: Function, callback?: (event: SubscriptionEvent) => void): void;
   truncate(callback?: (err?: Error) => void): void;
   get_table_name(): string;
   get_keyspace_name(): string;
@@ -470,17 +474,17 @@ export interface TransactionOperation {
 export interface SubscriptionConfig {
   table: string;
   operation: 'insert' | 'update' | 'delete' | 'all';
-  filter?: Record<string, any>;
+  filter?: SubscriptionFilter;
 }
 
 export interface Subscription {
   id: string;
   config: SubscriptionConfig;
-  callback: Function;
+  callback: (event: SubscriptionEvent) => void;
 }
 
 export interface AIConfig {
-  provider: 'openai' | 'anthropic' | 'local';
+  provider: 'openai' | 'huggingface' | 'custom';
   apiKey?: string;
   model?: string;
 }

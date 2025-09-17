@@ -1,7 +1,7 @@
-import { CassandraClient } from './client.js';
-import { RealAIMLManager, ProductionSemanticCache, AIMLConfig } from '../ai-ml/real-integration.js';
-import { AdvancedPerformanceOptimizer, ConnectionPoolOptimizer, PerformanceConfig } from '../performance/advanced-optimization.js';
-import { DistributedSystemsManager, DistributedConfig } from '../distributed/distributed-manager.js';
+import { CassandraClient } from './client';
+import { RealAIMLManager, ProductionSemanticCache, AIMLConfig } from '../ai-ml/real-integration';
+import { AdvancedPerformanceOptimizer, ConnectionPoolOptimizer, PerformanceConfig } from '../performance/advanced-optimization';
+import { DistributedSystemsManager, DistributedConfig } from '../distributed/distributed-manager';
 
 export interface EnhancedClientConfig {
   clientOptions: any;
@@ -13,9 +13,9 @@ export interface EnhancedClientConfig {
 
 export class EnhancedCassandraClient extends CassandraClient {
   private aimlManager?: RealAIMLManager;
-  private semanticCache?: ProductionSemanticCache;
+  private productionSemanticCache?: any;
   private performanceOptimizer?: AdvancedPerformanceOptimizer;
-  private connectionPool?: ConnectionPoolOptimizer;
+  private poolOptimizer?: any;
   private distributedManager?: DistributedSystemsManager;
 
   constructor(config: EnhancedClientConfig) {
@@ -25,7 +25,7 @@ export class EnhancedCassandraClient extends CassandraClient {
     if (config.aiml) {
       this.aimlManager = new RealAIMLManager(config.aiml);
       if (config.aiml.semanticCache?.enabled) {
-        this.semanticCache = new ProductionSemanticCache(
+        (this as any).semanticCache = new ProductionSemanticCache(
           this.aimlManager, 
           config.aiml.semanticCache.threshold || 0.85
         );
@@ -36,7 +36,7 @@ export class EnhancedCassandraClient extends CassandraClient {
     if (config.performance) {
       this.performanceOptimizer = new AdvancedPerformanceOptimizer(config.performance);
       if (config.performance.connectionPool) {
-        this.connectionPool = new ConnectionPoolOptimizer(config.performance.connectionPool);
+        (this as any).connectionPool = new ConnectionPoolOptimizer(config.performance.connectionPool);
       }
     }
 
@@ -78,17 +78,17 @@ export class EnhancedCassandraClient extends CassandraClient {
   }
 
   getConnectionPoolStats(): any {
-    if (!this.connectionPool) {
+    if (!(this as any).connectionPool) {
       return { error: 'Connection pool not configured' };
     }
-    return this.connectionPool.getPoolStats();
+    return (this as any).connectionPool.getStats();
   }
 
   getSemanticCacheStats(): any {
-    if (!this.semanticCache) {
+    if (!(this as any).semanticCache) {
       return { error: 'Semantic cache not configured' };
     }
-    return this.semanticCache.getStats();
+    return (this as any).semanticCache.getStats();
   }
 
   // Enhanced execute with error handling
@@ -106,9 +106,9 @@ export class EnhancedCassandraClient extends CassandraClient {
     }
 
     // Try semantic cache
-    if (this.semanticCache) {
+    if ((this as any).semanticCache) {
       try {
-        const cachedResult = await this.semanticCache.get(query, params);
+        const cachedResult = await (this as any).semanticCache.get(query, params);
         if (cachedResult) {
           return cachedResult;
         }
@@ -162,9 +162,9 @@ export class EnhancedCassandraClient extends CassandraClient {
     }
 
     // Cache result semantically
-    if (this.semanticCache && result) {
+    if ((this as any).semanticCache && result) {
       try {
-        await this.semanticCache.set(query, params, result);
+        await (this as any).semanticCache.set(query, params, result);
       } catch (error) {
         console.warn('Semantic cache set error:', error);
       }

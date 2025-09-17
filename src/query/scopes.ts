@@ -317,7 +317,7 @@ export const CommonScopes = {
   // Pagination scopes
   limit: (count: number) => (query: QueryBuilder) => query.limit(count),
   page: (page: number, perPage: number = 15) => (query: QueryBuilder) => 
-    query.limit(perPage).offset((page - 1) * perPage),
+    query.limit(perPage).limit((page - 1) * perPage),
 
   // Search scopes
   search: (term: string, fields: string[] = ['name']) => {
@@ -343,9 +343,9 @@ export const CommonFilters = {
   search: (query: QueryBuilder, term: string, fields: string[] = ['name']) => {
     fields.forEach((field, index) => {
       if (index === 0) {
-        query.whereLike(field, `%${term}%`);
+        query.where(field, `%${term}%`);
       } else {
-        query.orWhere(field, 'like', `%${term}%`);
+        query.where(field, 'like', `%${term}%`);
       }
     });
     return query;
@@ -353,7 +353,7 @@ export const CommonFilters = {
 
   // Date range filter
   dateRange: (query: QueryBuilder, field: string, start: Date, end: Date) => {
-    return query.whereBetween(field, start, end);
+    return query.where(field, start, end);
   },
 
   // Status filter
@@ -371,7 +371,7 @@ export const CommonFilters = {
 
   // Pagination filter
   paginate: (query: QueryBuilder, page: number, perPage: number = 15) => {
-    return query.paginate(page, perPage);
+    return query.limit(page, perPage);
   }
 };
 

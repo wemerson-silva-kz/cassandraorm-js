@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node --format esm",
+    "tsc": "tsc",
     "test": "jest",
     "test:full": "bun test",
     "test:playground": "bun run ./playground/run-all-tests.ts",
@@ -95,5 +96,29 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
+  },
+  "jest": {
+    "preset": "ts-jest/presets/default-esm",
+    "testEnvironment": "node",
+    "extensionsToTreatAsEsm": [".ts"],
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(cassandra-driver)/)"
+    ],
+    "transform": {
+      "^.+\\.tsx?$": [
+        "ts-jest",
+        {
+          "useESM": true
+        }
+      ]
+    },
+    "setupFilesAfterEnv": ["<rootDir>/test/setup.ts"],
+    "testMatch": [
+      "**/__tests__/**/*.ts",
+      "**/?(*.)+(spec|test).ts"
+    ]
   }
 }

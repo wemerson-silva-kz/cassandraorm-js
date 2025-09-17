@@ -61,6 +61,19 @@ export class SubscriptionManager extends EventEmitter {
     return subscriptionId;
   }
 
+  // Convenience method for tests
+  subscribeWithId(subscriptionId: string, config: SubscriptionConfig): void {
+    this.subscriptions.set(subscriptionId, config);
+    
+    // Initialize stats
+    if (!this.subscriptionStats.has(subscriptionId)) {
+      this.subscriptionStats.set(subscriptionId, {
+        subscription: { ...config, eventCount: 0 },
+        eventCount: 0
+      });
+    }
+  }
+
   async unsubscribe(subscriptionId: string): Promise<void> {
     this.subscriptions.delete(subscriptionId);
     this.removeAllListeners(`subscription:${subscriptionId}`);
@@ -128,60 +141,52 @@ export class SubscriptionManager extends EventEmitter {
     eventCount: number; 
   }>();
 
-  // Enhanced subscribe method with stats tracking
-  subscribe(id: string, config: any) {
-    this.subscriptions.set(id, config);
-    this.subscriptionStats.set(id, {
-      subscription: {
-        ...config,
-        createdAt: new Date(),
-        eventCount: 0
-      },
-      eventCount: 0
-    });
-  }
-
-  // Simulate event publishing for testing
-  publishEvent(event: { table: string; operation: string; data?: any; [key: string]: any }) {
+  // Find matching subscriptions for an event
+  findMatchingSubscriptions(table: string, operation: string, data?: any): any[] {
     const matches = [];
     
     for (const [id, subscription] of this.subscriptions) {
-      // Check table match - MUST match exactly
-      if (subscription.table !== event.table) {
+      // Check table match
+      if (subscription.table !== table) {
         continue;
       }
       
       // Check operation match
       const operations = subscription.operations || ['insert', 'update', 'delete'];
-      if (!operations.includes(event.operation as any)) {
+      if (!operations.includes(operation as any)) {
         continue;
       }
       
-      // Check filters match - only if filters exist and have properties
-      if (subscription.filters && Object.keys(subscription.filters).length > 0) {
-        let filtersMatch = true;
-        for (const [key, value] of Object.entries(subscription.filters)) {
-          if (event[key] !== value) {
-            filtersMatch = false;
+      // Check filter match
+      if (subscription.filter?.where && data) {
+        let filterMatch = true;
+        for (const [key, value] of Object.entries(subscription.filter.where)) {
+          if (data[key] !== value) {
+            filterMatch = false;
             break;
           }
         }
-        if (!filtersMatch) {
+        if (!filterMatch) {
           continue;
         }
       }
       
-      // Update subscription stats
+      // Update stats
       const stats = this.subscriptionStats.get(id);
       if (stats) {
         stats.eventCount++;
         stats.subscription.eventCount = stats.eventCount;
       }
       
-      matches.push({ id, subscription: this.subscriptionStats.get(id)?.subscription });
+      matches.push({ id, subscription });
     }
     
     return matches;
+  }
+
+  // Simulate event publishing for testing
+  publishEvent(event: { table: string; operation: string; data?: any; [key: string]: any }) {
+    return this.findMatchingSubscriptions(event.table, event.operation, event.data);
   }
 
   getSubscriptionStats() {

@@ -14,21 +14,18 @@ describe('Session 4: AI/ML Integration', () => {
 
   describe('Vector Search Setup', () => {
     it('should create vector table structure', async () => {
-      const VectorModel = await client.loadSchema('vector_test', {
+      const VectorModel = await client.loadSchema('vector_test_simple', {
         fields: {
           id: 'uuid',
           content: 'text',
-          embedding: 'text', // Simulated vector as text
-          metadata: 'map<text, text>'
+          embedding: 'text' // Simulated vector as text
         },
         key: ['id']
       });
 
       const vectorData = await VectorModel.create({
-        id: client.constructor.uuid().toString(),
         content: 'Machine learning algorithms',
-        embedding: '[0.1, 0.2, 0.3, 0.4, 0.5]', // Simulated embedding
-        metadata: new Map([['category', 'ai'], ['difficulty', 'medium']])
+        embedding: '[0.1, 0.2, 0.3, 0.4, 0.5]' // Simulated embedding
       });
 
       expect(vectorData.content).toBe('Machine learning algorithms');

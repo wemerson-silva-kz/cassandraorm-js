@@ -159,6 +159,18 @@ export class DistributedLockManager {
     }
   }
 
+  async isLocked(resource: string): Promise<boolean> {
+    const lockKey = `lock:${resource}`;
+    
+    try {
+      await this.redis.connect();
+      return await this.redis.exists(lockKey);
+    } catch (error) {
+      console.error('Lock check failed:', error);
+      return false;
+    }
+  }
+
   async withLock<T>(resource: string, fn: () => Promise<T>, ttl?: number): Promise<T> {
     const lockValue = await this.acquireLock(resource, ttl);
     if (!lockValue) {

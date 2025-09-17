@@ -1,6 +1,6 @@
 import { Client } from 'cassandra-driver';
 import { Readable, Transform } from 'stream';
-import type { QueryOptions, FindQuery, QueryParameters, DatabaseRow, CassandraValue, EachRowOptions, ResultSet } from '../core/types.js';
+import type { QueryOptions, FindQuery, QueryParameters, DatabaseRow, CassandraValue, any, ResultSet } from '../core/types.js';
 
 export interface StreamResult {
   rowCount: number;
@@ -14,7 +14,7 @@ export class StreamingQuery {
   eachRow(
     query: string, 
     params: QueryParameters, 
-    options: EachRowOptions,
+    options: any,
     onReadable: (n: number, row: DatabaseRow) => void,
     callback?: (err?: Error, result?: ResultSet) => void
   ): void {
@@ -28,7 +28,7 @@ export class StreamingQuery {
     this.client.eachRow(query, params, finalOptions, onReadable, callback);
   }
 
-  stream(query: string, params: QueryParameters = [], options: EachRowOptions = {}): NodeJS.ReadableStream {
+  stream(query: string, params: QueryParameters = [], options: any = {}): NodeJS.ReadableStream {
     const readable = new Readable({ objectMode: true });
     let rowCount = 0;
 
@@ -122,7 +122,7 @@ export function createModelStream<T extends DatabaseRow>(
     _properties: { name: string };
   },
   query: FindQuery = {},
-  options: EachRowOptions = {}
+  options: any = {}
 ): NodeJS.ReadableStream {
   const client = ModelClass.get_cql_client();
   const streaming = new StreamingQuery(client);

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { ConsulServiceDiscovery, DistributedConfigManager } from '../../src/distributed/consul-integration.js';
+import { ConsulServiceDiscovery, DistributedConfigManager } from "../../src/distributed/consul-integration";
 
 // Mock fetch
-global.fetch = jest.fn();
+global.fetch = jest.fn() as any;
 
 describe('Consul Integration', () => {
   describe('ConsulServiceDiscovery', () => {

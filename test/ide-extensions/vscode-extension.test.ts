@@ -8,7 +8,7 @@ const mockVSCode = {
     Method: 3,
     Snippet: 4
   },
-  MarkdownString: jest.fn().mockImplementation(() => ({
+  MarkdownString: (jest.fn() as any).mockImplementation(() => ({
     appendCodeblock: jest.fn(),
     appendMarkdown: jest.fn()
   })),

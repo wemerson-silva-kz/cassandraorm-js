@@ -1,20 +1,20 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { EnhancedCassandraClient, createEnhancedClient } from '../../src/core/enhanced-client.js';
+import { EnhancedCassandraClient, createEnhancedClient } from "../../src/core/enhanced-client";
 
 // Mock distributed systems
 jest.mock('../../src/distributed/distributed-manager.js', () => ({
-  DistributedSystemsManager: jest.fn().mockImplementation(() => ({
-    initialize: jest.fn().mockResolvedValue(undefined),
-    shutdown: jest.fn().mockResolvedValue(undefined),
-    getCachedQuery: jest.fn().mockResolvedValue(null),
-    setCachedQuery: jest.fn().mockResolvedValue(undefined),
-    acquireLock: jest.fn().mockResolvedValue('lock-value'),
-    releaseLock: jest.fn().mockResolvedValue(true),
-    withLock: jest.fn().mockImplementation(async (resource, fn) => await fn()),
-    discoverServices: jest.fn().mockResolvedValue([]),
-    setConfig: jest.fn().mockResolvedValue(undefined),
-    getConfig: jest.fn().mockResolvedValue(null),
-    getSystemHealth: jest.fn().mockResolvedValue({ status: 'healthy' })
+  DistributedSystemsManager: (jest.fn() as any).mockImplementation(() => ({
+    initialize: (jest.fn() as any).mockResolvedValue(undefined),
+    shutdown: (jest.fn() as any).mockResolvedValue(undefined),
+    getCachedQuery: (jest.fn() as any).mockResolvedValue(null),
+    setCachedQuery: (jest.fn() as any).mockResolvedValue(undefined),
+    acquireLock: (jest.fn() as any).mockResolvedValue('lock-value'),
+    releaseLock: (jest.fn() as any).mockResolvedValue(true),
+    withLock: (jest.fn() as any).mockImplementation(async (resource, fn) => await fn()),
+    discoverServices: (jest.fn() as any).mockResolvedValue([]),
+    setConfig: (jest.fn() as any).mockResolvedValue(undefined),
+    getConfig: (jest.fn() as any).mockResolvedValue(null),
+    getSystemHealth: (jest.fn() as any).mockResolvedValue({ status: 'healthy' })
   }))
 }));
 
@@ -165,7 +165,7 @@ describe('Enhanced Cassandra Client', () => {
       const released = await client.releaseDistributedLock('test-resource', lockValue!);
       expect(released).toBe(true);
 
-      const mockFn = jest.fn().mockResolvedValue('result');
+      const mockFn = (jest.fn() as any).mockResolvedValue('result');
       const result = await client.withDistributedLock('test-resource', mockFn);
       expect(result).toBe('result');
       expect(mockFn).toHaveBeenCalled();

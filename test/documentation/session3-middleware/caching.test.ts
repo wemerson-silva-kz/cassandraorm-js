@@ -10,7 +10,7 @@ describe('Session 3: Caching System', () => {
 
   afterAll(async () => {
     if (client) {
-      await TestHelpers.cleanup(client);
+      await TestHelpers.cleanup();
     }
   });
 

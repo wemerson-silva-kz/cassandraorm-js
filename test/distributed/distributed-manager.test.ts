@@ -1,17 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { DistributedSystemsManager } from '../../src/distributed/distributed-manager.js';
+import { DistributedSystemsManager } from "../../src/distributed/distributed-manager";
 
 // Mock dependencies
 jest.mock('../../src/distributed/redis-integration.js', () => ({
-  RedisDistributedCache: jest.fn().mockImplementation(() => ({
-    connect: jest.fn().mockResolvedValue(undefined),
-    disconnect: jest.fn().mockResolvedValue(undefined),
+  RedisDistributedCache: (jest.fn() as any).mockImplementation(() => ({
+    connect: (jest.fn() as any).mockResolvedValue(undefined),
+    disconnect: (jest.fn() as any).mockResolvedValue(undefined),
     get: jest.fn(),
     set: jest.fn(),
     del: jest.fn(),
-    getStats: jest.fn().mockResolvedValue({ connected: true })
+    getStats: (jest.fn() as any).mockResolvedValue({ connected: true })
   })),
-  DistributedLockManager: jest.fn().mockImplementation(() => ({
+  DistributedLockManager: (jest.fn() as any).mockImplementation(() => ({
     acquireLock: jest.fn(),
     releaseLock: jest.fn(),
     withLock: jest.fn()
@@ -19,13 +19,13 @@ jest.mock('../../src/distributed/redis-integration.js', () => ({
 }));
 
 jest.mock('../../src/distributed/consul-integration.js', () => ({
-  ConsulServiceDiscovery: jest.fn().mockImplementation(() => ({
-    registerService: jest.fn().mockResolvedValue(undefined),
-    deregisterService: jest.fn().mockResolvedValue(undefined),
+  ConsulServiceDiscovery: (jest.fn() as any).mockImplementation(() => ({
+    registerService: (jest.fn() as any).mockResolvedValue(undefined),
+    deregisterService: (jest.fn() as any).mockResolvedValue(undefined),
     getHealthyServices: jest.fn(),
-    getClusterStatus: jest.fn().mockResolvedValue('leader-id')
+    getClusterStatus: (jest.fn() as any).mockResolvedValue('leader-id')
   })),
-  DistributedConfigManager: jest.fn().mockImplementation(() => ({
+  DistributedConfigManager: (jest.fn() as any).mockImplementation(() => ({
     setConfig: jest.fn(),
     getConfig: jest.fn(),
     getAllConfigs: jest.fn()
@@ -105,7 +105,7 @@ describe('Distributed Systems Manager', () => {
     await manager.acquireLock('test-resource', 5000);
     await manager.releaseLock('test-resource', 'lock-value');
 
-    const mockFn = jest.fn().mockResolvedValue('result');
+    const mockFn = (jest.fn() as any).mockResolvedValue('result');
     await manager.withLock('test-resource', mockFn);
 
     // Should not throw errors

@@ -11,7 +11,7 @@ describe('Session 6: GraphQL Integration', () => {
 
   afterAll(async () => {
     if (client) {
-      await TestHelpers.cleanup(client);
+      await TestHelpers.cleanup();
     }
   });
 

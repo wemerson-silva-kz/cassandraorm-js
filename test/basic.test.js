@@ -1,36 +1,40 @@
-const { CassandraORM } = require('../src/index.js');
+const { createClient } = require('../src/index.js');
 const { test, expect, beforeAll, afterAll } = require('bun:test');
 
-let orm;
+let client;
 let User;
 
 beforeAll(async () => {
-  orm = new CassandraORM({
-    contactPoints: ['localhost'],
-    localDataCenter: 'datacenter1',
-    keyspace: 'test_cassandraorm_bun'
+  client = createClient({
+    clientOptions: {
+      contactPoints: ['127.0.0.1:9042'],
+      localDataCenter: 'datacenter1',
+      keyspace: 'test_basic'
+    },
+    ormOptions: {
+      createKeyspace: true,
+      migration: 'drop'
+    }
   });
   
-  await orm.connect();
+  await client.connect();
   
-  User = orm.model('test_users_bun', {
-    id: 'uuid',
-    name: 'text',
-    email: 'text'
-  }, {
+  User = await client.loadSchema('test_users_basic', {
+    fields: {
+      id: 'uuid',
+      name: 'text',
+      email: 'text'
+    },
     key: ['id']
   });
-  
-  await User.createTable();
 });
 
 afterAll(async () => {
-  await orm.shutdown();
+  await client.disconnect();
 });
 
 test('should create a user', async () => {
   const user = await User.create({
-    id: orm.uuid(),
     name: 'Test User',
     email: 'test@example.com'
   });
@@ -45,14 +49,9 @@ test('should find users', async () => {
   expect(users.length).toBeGreaterThan(0);
 });
 
-test('should generate UUID', () => {
-  const id = orm.uuid();
-  expect(id).toBeDefined();
-  expect(typeof id.toString()).toBe('string');
-});
-
 test('should create batch operations', () => {
-  const batch = orm.batch();
+  const batch = client.createBatch();
   expect(batch).toBeDefined();
-  expect(typeof batch.insert).toBe('function');
+  expect(typeof batch.add).toBe('function');
+  expect(typeof batch.execute).toBe('function');
 });

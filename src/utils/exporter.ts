@@ -34,7 +34,7 @@ export class DataExporter {
     }
   }
 
-  private serializeValue(value: unknown): CassandraValue {
+  private serializeValue(value: unknown): any {
     if (value === null || value === undefined) return value;
     
     if (value instanceof Date) return value.toISOString();

@@ -64,19 +64,118 @@ export class AIMLManager {
     return embedding.map(val => magnitude > 0 ? val / magnitude : 0);
   }
 
-  async generateEmbedding(text: string): Promise<number[]> {
-    // Simple text-to-vector conversion for basic functionality
-    const words = text.toLowerCase().split(/\s+/);
-    const embedding = new Array(100).fill(0);
+  async detectAnomalies(data: any[], options: { threshold?: number; method?: 'statistical' | 'isolation' } = {}): Promise<any[]> {
+    const threshold = options.threshold || 2.0; // Standard deviations
+    const method = options.method || 'statistical';
     
-    for (let i = 0; i < words.length && i < 100; i++) {
-      const word = words[i];
-      for (let j = 0; j < word.length && j < 100; j++) {
-        embedding[j] += word.charCodeAt(j % word.length) / 1000;
-      }
+    if (method === 'statistical') {
+      return this.statisticalAnomalyDetection(data, threshold);
     }
     
-    return embedding;
+    return this.isolationForestAnomalyDetection(data, threshold);
+  }
+
+  private statisticalAnomalyDetection(data: any[], threshold: number): any[] {
+    if (data.length === 0) return [];
+    
+    // Extract numeric features for analysis
+    const features = this.extractNumericFeatures(data);
+    const anomalies: any[] = [];
+    
+    for (const feature of Object.keys(features)) {
+      const values = features[feature];
+      const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+      const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+      const stdDev = Math.sqrt(variance);
+      
+      values.forEach((value, index) => {
+        const zScore = Math.abs((value - mean) / stdDev);
+        if (zScore > threshold) {
+          const anomaly = {
+            index,
+            data: data[index],
+            feature,
+            value,
+            zScore,
+            anomalyType: 'statistical_outlier',
+            confidence: Math.min(zScore / threshold, 1.0)
+          };
+          
+          // Avoid duplicates
+          if (!anomalies.some(a => a.index === index)) {
+            anomalies.push(anomaly);
+          }
+        }
+      });
+    }
+    
+    return anomalies;
+  }
+
+  private isolationForestAnomalyDetection(data: any[], threshold: number): any[] {
+    // Simplified isolation forest implementation
+    const features = this.extractNumericFeatures(data);
+    const anomalies: any[] = [];
+    
+    // Calculate isolation scores for each data point
+    data.forEach((item, index) => {
+      let isolationScore = 0;
+      let featureCount = 0;
+      
+      for (const feature of Object.keys(features)) {
+        const values = features[feature];
+        const value = values[index];
+        
+        // Simple isolation score based on how far the value is from median
+        const sortedValues = [...values].sort((a, b) => a - b);
+        const median = sortedValues[Math.floor(sortedValues.length / 2)];
+        const mad = this.calculateMAD(sortedValues, median);
+        
+        if (mad > 0) {
+          const score = Math.abs(value - median) / mad;
+          isolationScore += score;
+          featureCount++;
+        }
+      }
+      
+      if (featureCount > 0) {
+        const avgScore = isolationScore / featureCount;
+        if (avgScore > threshold) {
+          anomalies.push({
+            index,
+            data: item,
+            isolationScore: avgScore,
+            anomalyType: 'isolation_outlier',
+            confidence: Math.min(avgScore / threshold, 1.0)
+          });
+        }
+      }
+    });
+    
+    return anomalies;
+  }
+
+  private extractNumericFeatures(data: any[]): Record<string, number[]> {
+    const features: Record<string, number[]> = {};
+    
+    data.forEach(item => {
+      for (const [key, value] of Object.entries(item)) {
+        if (typeof value === 'number' && !isNaN(value)) {
+          if (!features[key]) {
+            features[key] = [];
+          }
+          features[key].push(value);
+        }
+      }
+    });
+    
+    return features;
+  }
+
+  private calculateMAD(sortedValues: number[], median: number): number {
+    const deviations = sortedValues.map(val => Math.abs(val - median));
+    deviations.sort((a, b) => a - b);
+    return deviations[Math.floor(deviations.length / 2)];
   }
 
   async similaritySearch(table: string, embedding: number[], options: VectorSearchOptions = {}): Promise<any[]> {
@@ -110,28 +209,7 @@ export class AIMLManager {
     return id;
   }
 
-  async similaritySearch(
-    tableName: string,
-    queryEmbedding: number[],
-    options: VectorSearchOptions = {}
-  ): Promise<any[]> {
-    const { limit = 10, threshold = 0.7 } = options;
-    
-    // Simplified similarity search (in real implementation, use vector similarity functions)
-    const query = `
-      SELECT id, content, metadata, created_at
-      FROM ${this.keyspace}.${tableName}
-      LIMIT ?
-    `;
-    
-    const result = await this.client.execute(query, [limit], { prepare: true });
-    
-    // In a real implementation, this would use proper vector similarity
-    return result.rows.map(row => ({
-      ...row,
-      similarity: Math.random() * 0.3 + 0.7 // Mock similarity score
-    }));
-  }
+  
 
   async semanticSearch(tableName: string, query: string, options: VectorSearchOptions = {}): Promise<any[]> {
     const queryEmbedding = await this.generateEmbedding(query);

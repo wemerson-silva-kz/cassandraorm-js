@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { AdvancedPerformanceOptimizer, ConnectionPoolOptimizer } from '../../src/performance/advanced-optimization.js';
+import { AdvancedPerformanceOptimizer, ConnectionPoolOptimizer } from "../../src/performance/advanced-optimization";
 
 describe('Advanced Performance Optimization', () => {
   const mockConfig = {
@@ -74,7 +74,7 @@ describe('Advanced Performance Optimization', () => {
       const params = ['123'];
       const mockResult = { rows: [{ id: '123', name: 'test' }] };
 
-      const mockExecutor = jest.fn().mockResolvedValue(mockResult);
+      const mockExecutor = (jest.fn() as any).mockResolvedValue(mockResult);
 
       const result = await optimizer.executeWithCache(query, params, mockExecutor);
 

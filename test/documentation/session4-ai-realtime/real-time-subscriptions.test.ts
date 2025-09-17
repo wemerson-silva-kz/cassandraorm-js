@@ -165,31 +165,20 @@ describe('Session 4: Real-time Subscriptions', () => {
       const subscriptionManager = new SubscriptionManager(null as any, 'test');
       
       // Create subscriptions
-      subscriptionManager.subscribe('sub1', {
+      subscriptionManager.subscribeWithId('sub1', {
         table: 'users',
         operations: ['insert'],
-        filters: { status: 'active' }
+        filter: { where: { status: 'active' } }
       });
       
-      subscriptionManager.subscribe('sub2', {
+      subscriptionManager.subscribeWithId('sub2', {
         table: 'posts',
-        operations: ['insert', 'update'],
-        filters: {}
+        operations: ['insert', 'update']
       });
 
       // Publish events
-      const matches1 = subscriptionManager.publishEvent({
-        table: 'users',
-        operation: 'insert',
-        status: 'active',
-        data: { id: 'user1', name: 'Test User' }
-      });
-
-      const matches2 = subscriptionManager.publishEvent({
-        table: 'posts',
-        operation: 'insert',
-        data: { id: 'post1', title: 'Test Post' }
-      });
+      const matches1 = subscriptionManager.findMatchingSubscriptions('users', 'insert', { status: 'active' });
+      const matches2 = subscriptionManager.findMatchingSubscriptions('posts', 'insert', { id: 'post1', title: 'Test Post' });
 
       expect(matches1).toHaveLength(1);
       expect(matches2).toHaveLength(1);

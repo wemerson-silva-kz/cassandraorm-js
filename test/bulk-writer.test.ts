@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
-import { createClient, BulkWriter, UniqueConstraintManager } from '../src/index.js';
+import { createClient, BulkWriter, UniqueConstraintManager } from "../src/index";
 
 describe('Bulk Writer & Unique Constraints', () => {
   let client: any;

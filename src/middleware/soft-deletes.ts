@@ -45,7 +45,7 @@ export class SoftDeleteManager {
     const config = this.modelConfigs.get(modelName);
     
     if (config && config.defaultScope) {
-      query.whereNull(config.deletedAtField);
+      query.where(config.deletedAtField);
     }
     
     return query;
@@ -72,7 +72,7 @@ export class SoftDeleteManager {
       // Hooks would be executed here
     }
 
-    const result = await query.update(updateData);
+    const result = await query.set(updateData);
 
     // Handle cascade deletes
     if (config.cascadeDeletes.length > 0) {
@@ -103,7 +103,7 @@ export class SoftDeleteManager {
       [config.deletedAtField]: null
     };
 
-    return query.update(updateData);
+    return query.set(updateData);
   }
 
   // Force delete (permanent delete)
@@ -113,7 +113,7 @@ export class SoftDeleteManager {
     context?: HookContext
   ): Promise<any> {
     // This performs actual DELETE operation
-    return query.delete();
+    return query.where();
   }
 
   private async handleCascadeDeletes(
@@ -189,7 +189,7 @@ export class SoftDeleteQueryBuilder {
     if (this.softDeleteManager.isEnabled(this.modelName)) {
       return this.softDelete();
     }
-    // Would call super.delete() if extending QueryBuilder
+    // Would call super.where() if extending QueryBuilder
     return this.forceDelete();
   }
 
